@@ -11,10 +11,12 @@ from urllib import parse
 from urllib import request
 from datetime import datetime
 
-# timeout in 5 seconds:
-TIMEOUT = 5
+# timeout in 10 seconds:
+TIMEOUT = 10
 
-API_HOST = 'be.huobi.com'
+#'api.huobi.pro', 'be.huobi.com'
+#API_HOST = 'be.huobi.com'#暂时用不了了
+API_HOST = 'api.huobi.pro'
 
 SCHEME = 'https'
 
@@ -23,13 +25,15 @@ LANG = 'zh-CN'
 
 DEFAULT_GET_HEADERS = {
     'Accept': 'application/json',
-    'Accept-Language': LANG
+    'Accept-Language': LANG,
+    'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.71 Safari/537.36'
 }
 
 DEFAULT_POST_HEADERS = {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
-    'Accept-Language': LANG
+    'Accept-Language': LANG,
+    'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.71 Safari/537.36'
 }
 
 class Dict(dict):

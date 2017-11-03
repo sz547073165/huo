@@ -6,6 +6,11 @@ Created on Fri Nov  3 21:50:31 2017
 @author: Marco
 """
 
-import person
+from person import API_KEY
+from person import API_SECRET
+import misc
 
-print(person.API_KEY)
+client = misc.ApiClient(API_KEY, API_SECRET)
+
+kline = client.get('/market/detail/merged',symbol='ltcbtc')
+print(kline)
