@@ -3,7 +3,7 @@
 
 import time
 
-from misc import ApiClient, ApiError
+from huoBiApi import ApiClient, ApiError
 from person import API_KEY
 from person import API_SECRET
 
