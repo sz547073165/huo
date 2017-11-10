@@ -17,7 +17,7 @@ accs = client.get('/v1/account/accounts')
 accountIdValue = accs[0].id
 
 #获取五日均线斜率
-def getMA5SlopeList(client):
+def getMA5SlopeList():
     kLine = client.get('/market/history/kline',symbol=symbolValue,period='60min',size='9')
     '''五日均线'''
     ma5 = misc.getMALine(kLine,5)
@@ -26,17 +26,17 @@ def getMA5SlopeList(client):
     return ma5Slope
 
 #判断是否要买入
-def isBuy(client, slopeList):
+def isBuy(slopeList):
     if slopeList[0] > 1 and 0 > slopeList[1] and slopeList[1] > slopeList[2] and slopeList[2] > slopeList[3]:
         '''调用买入'''
 
 #判断是否要卖出
-def isSell(client, slopeList):
+def isSell(slopeList):
     if slopeList[0] < -1:
         '''调用卖出'''
 
 #查询当前成交、历史成交
-def getMatchResults(client):
+def getMatchResults():
     matchResults = client.get('/v1/order/matchresults',symbol=symbolValue,direct='prev')
     return matchResults
 
@@ -59,7 +59,7 @@ def lastMatchResultIsWhatAndPriceAndFees(matchResults):
             return 'sell',price,fees
 
 #创建并执行一个新订单，返回订单ID
-def place(client,amount,typeValue):
+def place(amount,typeValue):
     params={}
     params['account-id']=accountIdValue
     params['amount']=amount#限价单表示下单数量，市价买单时表示买多少钱，市价卖单时表示卖多少币
