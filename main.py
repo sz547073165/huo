@@ -18,10 +18,11 @@ def main():
     # get all accounts:
     accs = client.get('/v1/account/accounts')
     print(accs)
+    print(str(accs[0]))
     account_id = accs[0].id
     for acc in accs:
         subaccs = client.get('/v1/account/accounts/%s/balance' % acc.id)
-        print(subaccs)
+        #print(subaccs)
     time.sleep(2.0)
     '''# create order:
     order_id = client.post('/v1/order/orders', {

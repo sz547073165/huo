@@ -89,7 +89,7 @@ class ApiClient(object):
 
     def _call(self, method, uri, data=None):
         url = '%s://%s%s' % (SCHEME, self._host, uri)
-        print(method + ' ' + url)
+        #print(method + ' ' + url)
         headers = DEFAULT_GET_HEADERS if method=='GET' else DEFAULT_POST_HEADERS
         if self._assetPassword:
             headers['AuthData'] = self._auth_data()
