@@ -11,7 +11,7 @@ def main():
     client = ApiClient(API_KEY, API_SECRET)
     # get symbol:
     symbols = client.get('/v1/common/symbols')
-    print(symbols)
+    #print(symbols)
     # get user info:
     userinfo = client.get('/v1/users/user')
     print(userinfo)
