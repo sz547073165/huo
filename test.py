@@ -100,7 +100,7 @@ def getBlance(currency):
     subaccs = client.get('/v1/account/accounts/%s/balance' % accountIdValue)
     for sub in subaccs['list']:
         if sub['currency'] == currency and sub['type'] == 'trade':
-            return float(sub['balance'])
+            return round(float(sub['balance']),4)
 
 
 '''main'''
@@ -108,28 +108,31 @@ def getBlance(currency):
 operationType=misc.getConfigKeyValueByKeyName('config.ini','operationLog','type')
 isTrue=True
 while isTrue:
-    #获取均线斜率
-    slopeList = getMA5SlopeList()
-    print(slopeList)
-    if operationType == 'sell':
-        orderId=isBuy(slopeList)
-        if orderId:
-            orderInfo=getOrderInfo(orderId)
-            print(misc.getTimeStr())
-            print(orderInfo)
-            misc.sendEmail(mailHost, mailUser, mailPass, receivers, 'BTC_USDT交易报告', str(orderInfo))
-            misc.setConfigKeyValue('config.ini','operationLog','type','buy')
+    try:
+        #获取均线斜率
+        slopeList = getMA5SlopeList()
+        print(slopeList)
+        if operationType == 'sell':
+            orderId=isBuy(slopeList)
+            if orderId:
+                orderInfo=getOrderInfo(orderId)
+                print(misc.getTimeStr())
+                print(orderInfo)
+                misc.sendEmail(mailHost, mailUser, mailPass, receivers, 'BTC_USDT交易报告', str(orderInfo))
+                misc.setConfigKeyValue('config.ini','operationLog','type','buy')
+            pass
+        if operationType == 'buy':
+            orderId=isSell(slopeList)
+            if orderId:
+                orderInfo=getOrderInfo(orderId)
+                print(misc.getTimeStr())
+                print(orderInfo)
+                misc.sendEmail(mailHost, mailUser, mailPass, receivers, 'BTC_USDT交易报告', str(orderInfo))
+                misc.setConfigKeyValue('config.ini','operationLog','type','sell')
+            pass
+        #isTrue=False
+        time.sleep(5)
+    except:
         pass
-    if operationType == 'buy':
-        orderId=isSell(slopeList)
-        if orderId:
-            orderInfo=getOrderInfo(orderId)
-            print(misc.getTimeStr())
-            print(orderInfo)
-            misc.sendEmail(mailHost, mailUser, mailPass, receivers, 'BTC_USDT交易报告', str(orderInfo))
-            misc.setConfigKeyValue('config.ini','operationLog','type','sell')
-        pass
-    #isTrue=False
-    time.sleep(5)
     pass
 
