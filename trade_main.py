@@ -30,12 +30,16 @@ def getMA5SlopeList():
     ma5Slope = misc.getSlope(ma5)
     return ma5Slope
 
-def getMa5AndClose():
+def getMa5AndCloseAndFatherMa5Slope():
     kLine = client.get('/market/history/kline',symbol=symbolValue,period='15min',size='5')
     '''五日均线'''
     ma5 = misc.getMALine(kLine,5)
     last = kLine[0]['close']
-    return ma5[0], last
+    
+    fatherKLine = client.get('/market/history/kline',symbol=symbolValue,period='60min',size='6')
+    fatherMa5 = misc.getMALine(fatherKLine,5)
+    fatherMa5Slope = misc.getSlope(fatherMa5)
+    return ma5[0], last, fatherMa5Slope[0]
 
 #判断是否要买入
 def isBuy(slopeList):
@@ -139,14 +143,15 @@ def tactics1(operationType):
     except Exception as e:
         print(e)
 
-def isBuyOrSellByMa5ValueAndCloseValue(operationType,ma5Value,closeValue):
-    condition1=ma5Value > closeValue
+def isBuyOrSellByMa5ValueAndCloseValue(operationType,ma5Value,closeValue,fatherMa5Slope):
+    condition1=ma5Value > closeValue #true为卖出机会，false为买入机会
+    condition2=fatherMa5Slope > 0 #当true，为上升趋势，false为下跌趋势
     if condition1:
         if operationType == 'sell':
             print('已卖出，等待买入机会')
             return 'sell', None
         #卖出操作
-        balanceStr=getBlance(moneyName)
+        balanceStr=getBlance(coinName)
         pointIndex=balanceStr.index('.')
         amount=balanceStr[0:5+pointIndex]
         orderId = place(amount,'sell-market')
@@ -155,8 +160,11 @@ def isBuyOrSellByMa5ValueAndCloseValue(operationType,ma5Value,closeValue):
         if operationType == 'buy':
             print('已买入，等待卖出机会')
             return 'buy', None
+        if not condition2:
+            print('下跌趋势不买入')
+            return 'sell', None
         #买入操作
-        balanceStr=getBlance(coinName)
+        balanceStr=getBlance(moneyName)
         pointIndex=balanceStr.index('.')
         amount=balanceStr[0:5+pointIndex]
         orderId = place(amount,'buy-market')
@@ -166,22 +174,24 @@ def isBuyOrSellByMa5ValueAndCloseValue(operationType,ma5Value,closeValue):
 def tactics2(operationType):
     try:
         print(misc.getTimeStr())
-        ma5Value, closeValue = getMa5AndClose()
-        operation,orderId=isBuyOrSellByMa5ValueAndCloseValue(operationType,ma5Value,closeValue)
+        ma5Value, closeValue, fatherMa5Slope= getMa5AndCloseAndFatherMa5Slope()
+        operation,orderId=isBuyOrSellByMa5ValueAndCloseValue(operationType,ma5Value,closeValue,fatherMa5Slope)
         misc.setConfigKeyValue('config.ini','operationLog','type',operation)
         if orderId:
+            time.sleep(30)
             orderInfo=getOrderInfo(orderId)
             print(orderInfo)
             content='<html>'
-            content+='<p>symbol(交易对):%s</p>' % orderInfo['symbol']
-            content+='<p>amount(订单数量)%s</p>' % orderInfo['amount']
-            content+='<p>field-cash-amount(已成交总金额)%s</p>' % orderInfo['field-cash-amount']
-            content+='<p>field-fees(已成交手续费（买入为币，卖出为钱）)%s</p>' % orderInfo['field-fees']
-            content+='<p>price(订单价格)%s</p>' % orderInfo['price']
-            content+='<p>state(订单状态)%s</p>' % orderInfo['state']
-            content+='<p>type(订单类型（buy-market：市价买, sell-market：市价卖）)%s</p>' % orderInfo['type']
+            content+='<p>symbol(交易对)=%s</p>' % orderInfo['symbol']
+            content+='<p>amount(订单数量)=%s</p>' % orderInfo['amount']
+            content+='<p>field-cash-amount(已成交总金额)=%s</p>' % orderInfo['field-cash-amount']
+            content+='<p>field-fees(已成交手续费（买入为币，卖出为钱）)=%s</p>' % orderInfo['field-fees']
+            content+='<p>price(订单价格)=%s</p>' % orderInfo['price']
+            content+='<p>state(订单状态)=%s</p>' % orderInfo['state']
+            content+='<p>type(订单类型（buy-market：市价买, sell-market：市价卖）)=%s</p>' % orderInfo['type']
+            content+='<p>%s</p>' % str(orderInfo)
             content+='</html>'
-            misc.sendEmail(mailHost, mailUser, mailPass, receivers, 'BTC_USDT交易报告', content+str(orderInfo))
+            misc.sendEmail(mailHost, mailUser, mailPass, receivers, 'BTC_USDT交易报告', content)
     except Exception as e:
         print(e)
 '''main'''
