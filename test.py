@@ -34,6 +34,7 @@ def getMA5SlopeList():
 def isBuy(slopeList):
     condition1=slopeList[0] > 1 and 0 > slopeList[1] and slopeList[1] > slopeList[2] and slopeList[2] > slopeList[3]
     condition2=slopeList[0] > 2
+    print('isBuy条件判断情况：','\t',condition1,'\t',condition2)
     if condition1 or condition2:
         '''调用买入'''
         result = place(getBlance(moneyName),'buy-market')
@@ -47,6 +48,7 @@ def isSell(slopeList):
     condition2=(slopeList[1]+slopeList[2]+slopeList[3]) < -1
     condition3=slopeList[0] < -1 and 0 < slopeList[1] and slopeList[1] < slopeList[2] and slopeList[2] < slopeList[3]
     condition4=slopeList[0] < -1 and 0 < slopeList[1] and 0 < slopeList[2] and 0 < slopeList[3]
+    print('isSell条件判断情况：','\t',condition3,'\t',condition4)
     if condition3 or condition4:
         '''调用卖出'''
         result = place(getBlance(coinName),'sell-market')
@@ -100,7 +102,7 @@ def getBlance(currency):
     subaccs = client.get('/v1/account/accounts/%s/balance' % accountIdValue)
     for sub in subaccs['list']:
         if sub['currency'] == currency and sub['type'] == 'trade':
-            return round(float(sub['balance']),4)
+            return round(float(sub['balance']),3)
 
 
 '''main'''
@@ -109,6 +111,7 @@ operationType=misc.getConfigKeyValueByKeyName('config.ini','operationLog','type'
 isTrue=True
 while isTrue:
     try:
+        print(misc.getTimeStr())
         #获取均线斜率
         slopeList = getMA5SlopeList()
         print(slopeList)
@@ -120,7 +123,6 @@ while isTrue:
                 print(orderInfo)
                 misc.sendEmail(mailHost, mailUser, mailPass, receivers, 'BTC_USDT交易报告', str(orderInfo))
                 misc.setConfigKeyValue('config.ini','operationLog','type','buy')
-            pass
         if operationType == 'buy':
             orderId=isSell(slopeList)
             if orderId:
@@ -129,10 +131,8 @@ while isTrue:
                 print(orderInfo)
                 misc.sendEmail(mailHost, mailUser, mailPass, receivers, 'BTC_USDT交易报告', str(orderInfo))
                 misc.setConfigKeyValue('config.ini','operationLog','type','sell')
-            pass
         #isTrue=False
         time.sleep(5)
-    except:
-        pass
-    pass
+    except Exception as e:
+        print(e)
 
