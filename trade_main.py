@@ -30,10 +30,17 @@ def getMA5SlopeList():
     ma5Slope = misc.getSlope(ma5)
     return ma5Slope
 
+def getMa5AndClose():
+    kLine = client.get('/market/history/kline',symbol=symbolValue,period='15min',size='5')
+    '''五日均线'''
+    ma5 = misc.getMALine(kLine,5)
+    last = kLine[0]['close']
+    return ma5[0], last
+
 #判断是否要买入
 def isBuy(slopeList):
-    condition1=slopeList[0] > 1 and 0 > slopeList[1] and slopeList[1] > slopeList[2] and slopeList[2] > slopeList[3]
-    condition2=slopeList[0] > 2
+    condition1=slopeList[0] > abs(slopeList[2]) and 0 > slopeList[1] and slopeList[1] > slopeList[2] and slopeList[2] > slopeList[3]
+    condition2=slopeList[0] > 3
     print('isBuy条件判断情况：','\t',condition1,'\t',condition2)
     if condition1 or condition2:
         '''调用买入'''
@@ -44,10 +51,10 @@ def isBuy(slopeList):
 
 #判断是否要卖出
 def isSell(slopeList):
-    condition1=slopeList[0] < -1
-    condition2=(slopeList[1]+slopeList[2]+slopeList[3]) < -1
-    condition3=slopeList[0] < -1 and 0 < slopeList[1] and slopeList[1] < slopeList[2] and slopeList[2] < slopeList[3]
-    condition4=slopeList[0] < -1 and 0 < slopeList[1] and 0 < slopeList[2] and 0 < slopeList[3]
+    condition1=slopeList[0] < -30
+    condition2=(slopeList[1]+slopeList[2]+slopeList[3]) < -30
+    condition3=slopeList[0] < -20 and 0 < slopeList[1] and slopeList[1] < slopeList[2] and slopeList[2] < slopeList[3]
+    condition4=slopeList[0] < -40 and 0 < slopeList[1] and 0 < slopeList[2] and 0 < slopeList[3]
     print('isSell条件判断情况：','\t',condition3,'\t',condition4)
     if condition3 or condition4:
         '''调用卖出'''
@@ -91,6 +98,7 @@ def place(amount,typeValue):
     params['amount']=amount#限价单表示下单数量，市价买单时表示买多少钱，市价卖单时表示卖多少币
     params['symbol']=symbolValue
     params['type']=typeValue
+    print(params)
     return client.post('/v1/order/orders/place',params)
 
 #查询某个订单详情
@@ -102,14 +110,9 @@ def getBlance(currency):
     subaccs = client.get('/v1/account/accounts/%s/balance' % accountIdValue)
     for sub in subaccs['list']:
         if sub['currency'] == currency and sub['type'] == 'trade':
-            return round(float(sub['balance']),3)
+            return sub['balance']
 
-
-'''main'''
-#获取最后一次操作的类型，buy、sell
-operationType=misc.getConfigKeyValueByKeyName('config.ini','operationLog','type')
-isTrue=True
-while isTrue:
+def tactics1(operationType):
     try:
         print(misc.getTimeStr())
         #获取均线斜率
@@ -136,3 +139,56 @@ while isTrue:
     except Exception as e:
         print(e)
 
+def isBuyOrSellByMa5ValueAndCloseValue(operationType,ma5Value,closeValue):
+    condition1=ma5Value > closeValue
+    if condition1:
+        if operationType == 'sell':
+            print('已卖出，等待买入机会')
+            return 'sell', None
+        #卖出操作
+        balanceStr=getBlance(moneyName)
+        pointIndex=balanceStr.index('.')
+        amount=balanceStr[0:5+pointIndex]
+        orderId = place(amount,'sell-market')
+        return 'sell', orderId
+    else:
+        if operationType == 'buy':
+            print('已买入，等待卖出机会')
+            return 'buy', None
+        #买入操作
+        balanceStr=getBlance(coinName)
+        pointIndex=balanceStr.index('.')
+        amount=balanceStr[0:5+pointIndex]
+        orderId = place(amount,'buy-market')
+        return 'buy', orderId
+        
+
+def tactics2(operationType):
+    try:
+        print(misc.getTimeStr())
+        ma5Value, closeValue = getMa5AndClose()
+        operation,orderId=isBuyOrSellByMa5ValueAndCloseValue(operationType,ma5Value,closeValue)
+        misc.setConfigKeyValue('config.ini','operationLog','type',operation)
+        if orderId:
+            orderInfo=getOrderInfo(orderId)
+            print(orderInfo)
+            content='<html>'
+            content+='<p>symbol(交易对):%s</p>' % orderInfo['symbol']
+            content+='<p>amount(订单数量)%s</p>' % orderInfo['amount']
+            content+='<p>field-cash-amount(已成交总金额)%s</p>' % orderInfo['field-cash-amount']
+            content+='<p>field-fees(已成交手续费（买入为币，卖出为钱）)%s</p>' % orderInfo['field-fees']
+            content+='<p>price(订单价格)%s</p>' % orderInfo['price']
+            content+='<p>state(订单状态)%s</p>' % orderInfo['state']
+            content+='<p>type(订单类型（buy-market：市价买, sell-market：市价卖）)%s</p>' % orderInfo['type']
+            content+='</html>'
+            misc.sendEmail(mailHost, mailUser, mailPass, receivers, 'BTC_USDT交易报告', content+str(orderInfo))
+    except Exception as e:
+        print(e)
+'''main'''
+isTrue=True
+while isTrue:
+    #获取最后一次操作的类型，buy、sell
+    operationType=misc.getConfigKeyValueByKeyName('config.ini','operationLog','type')
+    tactics2(operationType)
+    time.sleep(180)
+    
