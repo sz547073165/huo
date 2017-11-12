@@ -194,9 +194,5 @@ while isTrue:
     #获取最后一次操作的类型，buy、sell
     operationType=misc.getConfigKeyValueByKeyName('config.ini',symbolValue,'type')
     tactics2(operationType)
-<<<<<<< HEAD:ma_main.py
     time.sleep(15)
-=======
-    time.sleep(300)
->>>>>>> 60cf201c77a5dfb2c7fb2886ef002154cf89ce8b:trade_main.py
     
