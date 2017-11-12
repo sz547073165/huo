@@ -200,5 +200,5 @@ while isTrue:
     #获取最后一次操作的类型，buy、sell
     operationType=misc.getConfigKeyValueByKeyName('config.ini','operationLog','type')
     tactics2(operationType)
-    time.sleep(180)
+    time.sleep(300)
     
