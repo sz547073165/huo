@@ -109,6 +109,13 @@ def place(amount,typeValue):
 def getOrderInfo(orderId):
     return client.get('/v1/order/orders/%s' % orderId)
 
+#查询最后一个买入订单的成交均价*1.005的价格
+def getLastBuyOrderPrice():
+    matchResults=getMatchResults()
+    for match in matchResults:
+        if match['type']=='buy-market' and match['symbol']==symbolValue:
+            return round(float(match['price']) * 1.01,4)
+
 #获取可用余额，usdt或btc
 def getBlance(currency):
     subaccs = client.get('/v1/account/accounts/%s/balance' % accountIdValue)
@@ -116,32 +123,11 @@ def getBlance(currency):
         if sub['currency'] == currency and sub['type'] == 'trade':
             return sub['balance']
 
-def tactics1(operationType):
-    try:
-        print(misc.getTimeStr())
-        #获取均线斜率
-        slopeList = getMA5SlopeList()
-        print(slopeList)
-        if operationType == 'sell':
-            orderId=isBuy(slopeList)
-            if orderId:
-                orderInfo=getOrderInfo(orderId)
-                print(misc.getTimeStr())
-                print(orderInfo)
-                misc.sendEmail(mailHost, mailUser, mailPass, receivers, 'BTC_USDT交易报告', str(orderInfo))
-                misc.setConfigKeyValue('config.ini','operationLog','type','buy')
-        if operationType == 'buy':
-            orderId=isSell(slopeList)
-            if orderId:
-                orderInfo=getOrderInfo(orderId)
-                print(misc.getTimeStr())
-                print(orderInfo)
-                misc.sendEmail(mailHost, mailUser, mailPass, receivers, 'BTC_USDT交易报告', str(orderInfo))
-                misc.setConfigKeyValue('config.ini','operationLog','type','sell')
-        #isTrue=False
-        time.sleep(5)
-    except Exception as e:
-        print(e)
+#字符串截取的方式获取小数点后保留4位的数字
+def getFloatStr(numberStr):
+    pointIndex=numberStr.index('.')
+    flaotStr=numberStr[0:5+pointIndex]
+    return flaotStr
 
 def isBuyOrSellByMa5ValueAndCloseValue(operationType,ma5Value,closeValue,fatherMa5Slope):
     condition1=ma5Value > closeValue #true为卖出机会，false为买入机会
@@ -151,6 +137,15 @@ def isBuyOrSellByMa5ValueAndCloseValue(operationType,ma5Value,closeValue,fatherM
             print('已卖出，等待买入机会')
             return 'sell', None
         #卖出操作
+        price=getLastBuyOrderPrice()
+        if condition2:
+            if price > closeValue:#上升趋势，且盈利价格>市价时，不卖出
+                print('price=',price)
+                print('closeValue=',closeValue)
+                print('上升趋势，涨幅未超过1%，不卖出')
+                return 'buy', None
+        print('price=',price)
+        print('closeValue=',closeValue)
         balanceStr=getBlance(coinName)
         pointIndex=balanceStr.index('.')
         amount=balanceStr[0:5+pointIndex]
@@ -164,9 +159,7 @@ def isBuyOrSellByMa5ValueAndCloseValue(operationType,ma5Value,closeValue,fatherM
             print('下跌趋势不买入')
             return 'sell', None
         #买入操作
-        balanceStr=getBlance(moneyName)
-        pointIndex=balanceStr.index('.')
-        amount=balanceStr[0:5+pointIndex]
+        amount=misc.getConfigKeyValueByKeyName('config.ini',symbolValue,'usdt')
         orderId = place(amount,'buy-market')
         return 'buy', orderId
         
@@ -176,29 +169,33 @@ def tactics2(operationType):
         print(misc.getTimeStr())
         ma5Value, closeValue, fatherMa5Slope= getMa5AndCloseAndFatherMa5Slope()
         operation,orderId=isBuyOrSellByMa5ValueAndCloseValue(operationType,ma5Value,closeValue,fatherMa5Slope)
-        misc.setConfigKeyValue('config.ini','operationLog','type',operation)
+        misc.setConfigKeyValue('config.ini',symbolValue,'type',operation)
         if orderId:
             time.sleep(30)
-            orderInfo=getOrderInfo(orderId)
+            if operation == 'sell':
+                tempOrder=getOrderInfo(orderId)
+                fieldCashAmount=float(tempOrder['field-cash-amount'])
+                fieldFees=float(tempOrder['field-fees'])
+                usdt=getFloatStr(str(fieldCashAmount-fieldFees))
+                misc.setConfigKeyValue('config.ini',symbolValue,'usdt',usdt)
+            orderInfo=getMatchResults()[0]
             print(orderInfo)
             content='<html>'
             content+='<p>symbol(交易对)=%s</p>' % orderInfo['symbol']
-            content+='<p>amount(订单数量)=%s</p>' % orderInfo['amount']
-            content+='<p>field-cash-amount(已成交总金额)=%s</p>' % orderInfo['field-cash-amount']
-            content+='<p>field-fees(已成交手续费（买入为币，卖出为钱）)=%s</p>' % orderInfo['field-fees']
-            content+='<p>price(订单价格)=%s</p>' % orderInfo['price']
-            content+='<p>state(订单状态)=%s</p>' % orderInfo['state']
+            content+='<p>filled-amount(订单数量)=%s</p>' % orderInfo['filled-amount']
+            content+='<p>filled-fees(已成交手续费)=%s</p>' % orderInfo['filled-fees']
+            content+='<p>price(成交价格)=%s</p>' % orderInfo['price']
             content+='<p>type(订单类型（buy-market：市价买, sell-market：市价卖）)=%s</p>' % orderInfo['type']
             content+='<p>%s</p>' % str(orderInfo)
             content+='</html>'
-            misc.sendEmail(mailHost, mailUser, mailPass, receivers, 'BTC_USDT交易报告', content)
+            misc.sendEmail(mailHost, mailUser, mailPass, receivers, '交易报告', content)
     except Exception as e:
         print(e)
 '''main'''
 isTrue=True
 while isTrue:
     #获取最后一次操作的类型，buy、sell
-    operationType=misc.getConfigKeyValueByKeyName('config.ini','operationLog','type')
+    operationType=misc.getConfigKeyValueByKeyName('config.ini',symbolValue,'type')
     tactics2(operationType)
-    time.sleep(300)
+    time.sleep(15)
     
