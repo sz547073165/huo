@@ -24,7 +24,7 @@ global buySignal
 buySignal=0
 global sellSignal
 sellSignal=0
-buySignalMax=3
+buySignalMax=4
 sellSignalMax=6
 
 #查询当前成交、历史成交
@@ -243,7 +243,9 @@ isTrue=True
 while isTrue:
     #获取最后一次操作的类型，buy、sell
     operationType=misc.getConfigKeyValueByKeyName('config.ini',symbolValue,'type')
-    sleepTime=tactics1(operationType)
-    time.sleep(sleepTime)
-    #isTrue=False
+    try:
+        sleepTime=tactics1(operationType)
+        time.sleep(sleepTime)
+    except Exception as e:
+        print(e)
     
