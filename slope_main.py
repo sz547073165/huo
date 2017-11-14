@@ -24,8 +24,8 @@ global buySignal
 buySignal=0
 global sellSignal
 sellSignal=0
-buySignalMax=4
-sellSignalMax=6
+buySignalMax=6
+sellSignalMax=10
 
 #查询当前成交、历史成交
 def getMatchResults():
@@ -169,9 +169,9 @@ def doSell():
     orderId = place(amount,'sell-market')
     return 'sell', orderId
 
-def checkOperation(operationType,ma5LastSlope,ma11LastSlope):
+def checkOperation(operationType,ma4LastSlope,ma11LastSlope,ma3LastSlope,ma5LastSlope):
     if operationType == 'sell':
-        if ma5LastSlope < 0 or ma11LastSlope < 0:
+        if ma4LastSlope < 0 or ma11LastSlope < 0 or ma3LastSlope < 0 or ma5LastSlope < 0:
             print('条件不满足，不买入')
             global buySignal
             buySignal=0
@@ -204,9 +204,11 @@ def tactics1(operationType):
     #try:
     print(misc.getTimeStr())
     #获取均线斜率
-    ma5LastSlope = getLastMASlope('15min',4)[0]
+    ma4LastSlope = getLastMASlope('15min',4)[0]
     ma11LastSlope = getLastMASlope('15min',11)[0]
-    checkOperation(operationType,ma5LastSlope,ma11LastSlope)
+    ma3LastSlope = getLastMASlope('15min',3)[0]
+    ma5LastSlope = getLastMASlope('15min',5)[0]
+    checkOperation(operationType,ma4LastSlope,ma11LastSlope,ma3LastSlope,ma5LastSlope)
     operation,orderId=checkSignal()
     sleepTime=10
     if orderId:
