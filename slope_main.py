@@ -24,8 +24,8 @@ global buySignal
 buySignal=0
 global sellSignal
 sellSignal=0
-buySignalMax=6
-sellSignalMax=10
+buySignalMax=4
+sellSignalMax=7
 
 #查询当前成交、历史成交
 def getMatchResults():
@@ -169,9 +169,10 @@ def doSell():
     orderId = place(amount,'sell-market')
     return 'sell', orderId
 
-def checkOperation(operationType,ma4LastSlope,ma11LastSlope,ma3LastSlope,ma5LastSlope):
+def checkOperation(operationType,ma4LastSlope,ma11LastSlope,ma2LastSlope,ma3LastSlope,ma5LastSlope):
+    print(ma2LastSlope,'\t',ma3LastSlope,'\t',ma4LastSlope,'\t',ma5LastSlope,'\t',ma11LastSlope)
     if operationType == 'sell':
-        if ma4LastSlope < 0 or ma11LastSlope < 0 or ma3LastSlope < 0 or ma5LastSlope < 0:
+        if ma4LastSlope < 0 or ma11LastSlope < 0 or ma2LastSlope < 0 or ma3LastSlope < 0 or ma5LastSlope < 0:
             print('条件不满足，不买入')
             global buySignal
             buySignal=0
@@ -180,7 +181,7 @@ def checkOperation(operationType,ma4LastSlope,ma11LastSlope,ma3LastSlope,ma5Last
         buySignal=buySignal+1
         return
     if operationType == 'buy':
-        if ma4LastSlope > 0 or ma3LastSlope > 0:
+        if not((ma4LastSlope < 0 and ma3LastSlope < 0) or (ma2LastSlope < 0 and ma3LastSlope < 0)):
             print('条件不满足，不卖出')
             global sellSignal
             sellSignal=0
@@ -206,9 +207,10 @@ def tactics1(operationType):
     #获取均线斜率
     ma4LastSlope = getLastMASlope('15min',4)[0]
     ma11LastSlope = getLastMASlope('15min',11)[0]
+    ma2LastSlope = getLastMASlope('15min',2)[0]
     ma3LastSlope = getLastMASlope('15min',3)[0]
     ma5LastSlope = getLastMASlope('15min',5)[0]
-    checkOperation(operationType,ma4LastSlope,ma11LastSlope,ma3LastSlope,ma5LastSlope)
+    checkOperation(operationType,ma4LastSlope,ma11LastSlope,ma2LastSlope,ma3LastSlope,ma5LastSlope)
     operation,orderId=checkSignal()
     sleepTime=10
     if orderId:
@@ -244,8 +246,8 @@ def tactics1(operationType):
 isTrue=True
 while isTrue:
     #获取最后一次操作的类型，buy、sell
-    operationType=misc.getConfigKeyValueByKeyName('config.ini',symbolValue,'type')
     try:
+        operationType=misc.getConfigKeyValueByKeyName('config.ini',symbolValue,'type')
         sleepTime=tactics1(operationType)
         time.sleep(sleepTime)
     except Exception as e:
