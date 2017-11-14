@@ -37,7 +37,7 @@ def getMa5AndCloseAndFatherMa5Slope():
     last = kLine[0]['close']
     
     fatherKLine = client.get('/market/history/kline',symbol=symbolValue,period='60min',size='6')
-    fatherMa5 = misc.getMALine(fatherKLine,5)
+    fatherMa5 = misc.getMALine(fatherKLine,6)
     fatherMa5Slope = misc.getSlope(fatherMa5)
     return ma5[0], last, fatherMa5Slope[0]
 
