@@ -36,7 +36,7 @@ def getMa5AndCloseAndFatherMa5Slope():
     ma5 = misc.getMALine(kLine,5)
     last = kLine[0]['close']
     
-    fatherKLine = client.get('/market/history/kline',symbol=symbolValue,period='60min',size='6')
+    fatherKLine = client.get('/market/history/kline',symbol=symbolValue,period='60min',size='7')
     fatherMa5 = misc.getMALine(fatherKLine,6)
     fatherMa5Slope = misc.getSlope(fatherMa5)
     return ma5[0], last, fatherMa5Slope[0]
@@ -130,9 +130,21 @@ def getFloatStr(numberStr):
     return flaotStr
 
 def isBuyOrSellByMa5ValueAndCloseValue(operationType,ma5Value,closeValue,fatherMa5Slope):
-    condition1=ma5Value > closeValue #true为卖出机会，false为买入机会
+    condition1=ma5Value < closeValue #true为买入机会，false为卖出机会
     condition2=fatherMa5Slope > 0 #当true，为上升趋势，false为下跌趋势
+    print('均线=',ma5Value,'\t收盘价=',closeValue,'\t趋势指导=',fatherMa5Slope,'\tcondition1=',condition1,'\tcondition2=',condition2)
     if condition1:
+        if operationType == 'buy':
+            print('已买入，等待卖出机会')
+            return 'buy', None
+        if not condition2:
+            print('下跌趋势不买入')
+            return 'sell', None
+        #买入操作
+        amount=misc.getConfigKeyValueByKeyName('config.ini',symbolValue,'usdt')
+        orderId = place(amount,'buy-market')
+        return 'buy', orderId
+    else:
         if operationType == 'sell':
             print('已卖出，等待买入机会')
             return 'sell', None
@@ -151,17 +163,6 @@ def isBuyOrSellByMa5ValueAndCloseValue(operationType,ma5Value,closeValue,fatherM
         amount=balanceStr[0:5+pointIndex]
         orderId = place(amount,'sell-market')
         return 'sell', orderId
-    else:
-        if operationType == 'buy':
-            print('已买入，等待卖出机会')
-            return 'buy', None
-        if not condition2:
-            print('下跌趋势不买入')
-            return 'sell', None
-        #买入操作
-        amount=misc.getConfigKeyValueByKeyName('config.ini',symbolValue,'usdt')
-        orderId = place(amount,'buy-market')
-        return 'buy', orderId
         
 
 def tactics2(operationType):

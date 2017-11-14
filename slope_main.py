@@ -170,7 +170,6 @@ def doSell():
     return 'sell', orderId
 
 def checkOperation(operationType,ma4LastSlope,ma11LastSlope,ma2LastSlope,ma3LastSlope,ma5LastSlope):
-    print(ma2LastSlope,'\t',ma3LastSlope,'\t',ma4LastSlope,'\t',ma5LastSlope,'\t',ma11LastSlope)
     if operationType == 'sell':
         if ma4LastSlope < 0 or ma11LastSlope < 0 or ma2LastSlope < 0 or ma3LastSlope < 0 or ma5LastSlope < 0:
             print('条件不满足，不买入')
@@ -205,11 +204,13 @@ def tactics1(operationType):
     #try:
     print(misc.getTimeStr())
     #获取均线斜率
-    ma4LastSlope = getLastMASlope('15min',4)[0]
-    ma11LastSlope = getLastMASlope('15min',11)[0]
-    ma2LastSlope = getLastMASlope('15min',2)[0]
-    ma3LastSlope = getLastMASlope('15min',3)[0]
-    ma5LastSlope = getLastMASlope('15min',5)[0]
+    period='5min'
+    ma4LastSlope = getLastMASlope(period,4)[0]
+    ma11LastSlope = getLastMASlope(period,11)[0]
+    ma2LastSlope = getLastMASlope(period,2)[0]
+    ma3LastSlope = getLastMASlope(period,3)[0]
+    ma5LastSlope = getLastMASlope(period,5)[0]
+    print('ma2=',ma2LastSlope,'\tma3=',ma3LastSlope,'\tma4=',ma4LastSlope,'\tma5=',ma5LastSlope,'\tma11=',ma11LastSlope)
     checkOperation(operationType,ma4LastSlope,ma11LastSlope,ma2LastSlope,ma3LastSlope,ma5LastSlope)
     operation,orderId=checkSignal()
     sleepTime=10
