@@ -180,7 +180,7 @@ def checkOperation(operationType,ma4LastSlope,ma11LastSlope,ma3LastSlope,ma5Last
         buySignal=buySignal+1
         return
     if operationType == 'buy':
-        if ma5LastSlope > 0:
+        if ma4LastSlope > 0 or ma3LastSlope > 0:
             print('条件不满足，不卖出')
             global sellSignal
             sellSignal=0
