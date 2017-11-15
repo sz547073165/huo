@@ -24,8 +24,8 @@ global buySignal
 buySignal=0
 global sellSignal
 sellSignal=0
-buySignalMax=6
-sellSignalMax=6
+buySignalMax=5
+sellSignalMax=8
 
 #查询当前成交、历史成交
 def getMatchResults():
@@ -74,7 +74,7 @@ def getLastBuyOrderPrice():
     matchResults=getMatchResults()
     for match in matchResults:
         if match['type']=='buy-market':
-            return round(float(match['price']) * 1.01,4)
+            return round(float(match['price']) * 1.007,4)
 
 #获取可用余额，usdt或btc
 def getBlance(currency):
@@ -193,11 +193,11 @@ def checkOperation(operationType,ma4LastSlope,ma11LastSlope,ma2LastSlope,ma3Last
         buySignal=buySignal+1
         return
     if operationType == 'buy':
-        if price > closeValue:
-            print('涨幅超过1%，立即卖出')
+        '''if lastClose > price:
+            print('涨幅超过0.7%，立即卖出')
             global sellSignal
-            sellSignal=sellSignalMax
-            return
+            sellSignal=100
+            return'''
         if not((ma4LastSlope < 0 and ma3LastSlope < 0) or (ma2LastSlope < 0 and ma3LastSlope < 0)):
             print('条件不满足，不卖出')
             sellSignal=0
@@ -221,7 +221,7 @@ def tactics1(operationType):
     #try:
     print(misc.getTimeStr())
     #获取均线斜率
-    period='1min'
+    period='60min'
     ma4LastSlope = getLastMASlope(period,4)[0]
     ma11LastSlope = getLastMASlope(period,11)[0]
     ma2LastSlope = getLastMASlope(period,2)[0]
@@ -238,7 +238,7 @@ def tactics1(operationType):
         buySignal=0
         global sellSignal
         sellSignal=0
-        time.sleep(30)
+        time.sleep(10)
         if operation == 'sell':
             tempOrder=getOrderInfo(orderId)
             fieldCashAmount=float(tempOrder['field-cash-amount'])
@@ -267,7 +267,7 @@ while isTrue:
     try:
         operationType=misc.getConfigKeyValueByKeyName('config.ini',symbolValue,'type')
         tactics1(operationType)
-        sleepTime=7
+        sleepTime=20
         time.sleep(sleepTime)
     except Exception as e:
         print(e)
