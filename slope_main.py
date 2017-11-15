@@ -24,8 +24,8 @@ global buySignal
 buySignal=0
 global sellSignal
 sellSignal=0
-buySignalMax=4
-sellSignalMax=7
+buySignalMax=5
+sellSignalMax=8
 
 #查询当前成交、历史成交
 def getMatchResults():
@@ -171,7 +171,7 @@ def doSell():
 
 def checkOperation(operationType,ma4LastSlope,ma11LastSlope,ma2LastSlope,ma3LastSlope,ma5LastSlope):
     if operationType == 'sell':
-        if ma4LastSlope < 0 or ma11LastSlope < 0 or ma2LastSlope < 0 or ma3LastSlope < 0 or ma5LastSlope < 0:
+        if ma4LastSlope < 0 or ma2LastSlope < 0 or ma3LastSlope < 0 :
             print('条件不满足，不买入')
             global buySignal
             buySignal=0
@@ -204,7 +204,7 @@ def tactics1(operationType):
     #try:
     print(misc.getTimeStr())
     #获取均线斜率
-    period='5min'
+    period='60min'
     ma4LastSlope = getLastMASlope(period,4)[0]
     ma11LastSlope = getLastMASlope(period,11)[0]
     ma2LastSlope = getLastMASlope(period,2)[0]
@@ -213,7 +213,6 @@ def tactics1(operationType):
     print('ma2=',ma2LastSlope,'\tma3=',ma3LastSlope,'\tma4=',ma4LastSlope,'\tma5=',ma5LastSlope,'\tma11=',ma11LastSlope)
     checkOperation(operationType,ma4LastSlope,ma11LastSlope,ma2LastSlope,ma3LastSlope,ma5LastSlope)
     operation,orderId=checkSignal()
-    sleepTime=10
     if orderId:
         misc.setConfigKeyValue('config.ini',symbolValue,'type',operation)
         global buySignal
@@ -238,7 +237,6 @@ def tactics1(operationType):
         content+='<p>%s</p>' % str(orderInfo)
         content+='</html>'
         misc.sendEmail(mailHost, mailUser, mailPass, receivers, '交易报告', content)
-    return sleepTime
     #except Exception as e:
     #    print(e)
     #    return 10
@@ -249,7 +247,8 @@ while isTrue:
     #获取最后一次操作的类型，buy、sell
     try:
         operationType=misc.getConfigKeyValueByKeyName('config.ini',symbolValue,'type')
-        sleepTime=tactics1(operationType)
+        tactics1(operationType)
+        sleepTime=15
         time.sleep(sleepTime)
     except Exception as e:
         print(e)
