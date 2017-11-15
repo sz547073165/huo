@@ -24,8 +24,8 @@ global buySignal
 buySignal=0
 global sellSignal
 sellSignal=0
-buySignalMax=5
-sellSignalMax=8
+buySignalMax=6
+sellSignalMax=6
 
 #查询当前成交、历史成交
 def getMatchResults():
@@ -74,7 +74,7 @@ def getLastBuyOrderPrice():
     matchResults=getMatchResults()
     for match in matchResults:
         if match['type']=='buy-market':
-            return round(float(match['price']) * 1.005,4)
+            return round(float(match['price']) * 1.01,4)
 
 #获取可用余额，usdt或btc
 def getBlance(currency):
@@ -89,6 +89,15 @@ def getFloatStr(numberStr):
     flaotStr=numberStr[0:5+pointIndex]
     return flaotStr
 
+def getKLine(periodStr,dayStr):
+    return client.get('/market/history/kline',symbol=symbolValue,period=periodStr,size=str(int(dayStr)+1))
+
+def getLastMASlop(kLine,dayStr):
+    '''均线'''
+    ma = misc.getMALine(kLine,dayStr)
+    '''均线斜率'''
+    maSlope = misc.getSlope(ma)
+    return maSlope[0]
 #获取均线斜率
 def getLastMASlope(periodStr,dayStr):
     kLine = client.get('/market/history/kline',symbol=symbolValue,period=periodStr,size=str(int(dayStr)+1))
@@ -97,6 +106,10 @@ def getLastMASlope(periodStr,dayStr):
     '''均线斜率'''
     maSlope = misc.getSlope(ma)
     return maSlope
+
+def getLastClose(periodStr):
+    kLine = client.get('/market/history/kline',symbol=symbolValue,period=periodStr,size='1')
+    return float(kLine[0]['close'])
 
 def getMa5AndCloseAndFatherMa5Slope():
     kLine = client.get('/market/history/kline',symbol=symbolValue,period='15min',size='5')
@@ -169,7 +182,7 @@ def doSell():
     orderId = place(amount,'sell-market')
     return 'sell', orderId
 
-def checkOperation(operationType,ma4LastSlope,ma11LastSlope,ma2LastSlope,ma3LastSlope,ma5LastSlope):
+def checkOperation(operationType,ma4LastSlope,ma11LastSlope,ma2LastSlope,ma3LastSlope,ma5LastSlope,lastClose,price):
     if operationType == 'sell':
         if ma4LastSlope < 0 or ma2LastSlope < 0 or ma3LastSlope < 0 :
             print('条件不满足，不买入')
@@ -180,9 +193,13 @@ def checkOperation(operationType,ma4LastSlope,ma11LastSlope,ma2LastSlope,ma3Last
         buySignal=buySignal+1
         return
     if operationType == 'buy':
+        if price > closeValue:
+            print('涨幅超过1%，立即卖出')
+            global sellSignal
+            sellSignal=sellSignalMax
+            return
         if not((ma4LastSlope < 0 and ma3LastSlope < 0) or (ma2LastSlope < 0 and ma3LastSlope < 0)):
             print('条件不满足，不卖出')
-            global sellSignal
             sellSignal=0
             return
         sellSignal=sellSignal+1
@@ -204,14 +221,16 @@ def tactics1(operationType):
     #try:
     print(misc.getTimeStr())
     #获取均线斜率
-    period='60min'
+    period='1min'
     ma4LastSlope = getLastMASlope(period,4)[0]
     ma11LastSlope = getLastMASlope(period,11)[0]
     ma2LastSlope = getLastMASlope(period,2)[0]
     ma3LastSlope = getLastMASlope(period,3)[0]
     ma5LastSlope = getLastMASlope(period,5)[0]
-    print('ma2=',ma2LastSlope,'\tma3=',ma3LastSlope,'\tma4=',ma4LastSlope,'\tma5=',ma5LastSlope,'\tma11=',ma11LastSlope)
-    checkOperation(operationType,ma4LastSlope,ma11LastSlope,ma2LastSlope,ma3LastSlope,ma5LastSlope)
+    lastClose = getLastClose(period)
+    price=getLastBuyOrderPrice()
+    print('ma2=',ma2LastSlope,'\tma3=',ma3LastSlope,'\tma4=',ma4LastSlope,'\tlastClose=',lastClose,'\tprice=',price)
+    checkOperation(operationType,ma4LastSlope,ma11LastSlope,ma2LastSlope,ma3LastSlope,ma5LastSlope,lastClose,price)
     operation,orderId=checkSignal()
     if orderId:
         misc.setConfigKeyValue('config.ini',symbolValue,'type',operation)
@@ -248,7 +267,7 @@ while isTrue:
     try:
         operationType=misc.getConfigKeyValueByKeyName('config.ini',symbolValue,'type')
         tactics1(operationType)
-        sleepTime=15
+        sleepTime=7
         time.sleep(sleepTime)
     except Exception as e:
         print(e)
