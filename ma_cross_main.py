@@ -24,8 +24,8 @@ global buySignal
 buySignal=0
 global sellSignal
 sellSignal=0
-buySignalMax=5
-sellSignalMax=5
+buySignalMax=1
+sellSignalMax=1
 
 #查询当前成交、历史成交
 def getMatchResults():
@@ -63,12 +63,16 @@ def getMa(kLine,dayStr):
     ma = misc.getMALine(kLine,dayStr)
     return ma
 
-def checkCross(smallMa,bigMa):
-    if bigMa[1] > smallMa[1] and smallMa[0] > bigMa[0]:
+def checkCross(operationType,kLine,smallMa,bigMa):
+    condition1 = operationType == 'sell'
+    condition2 = operationType == 'buy'
+    condition3 = bigMa[1] > smallMa[1] and smallMa[0] > bigMa[0] and float(kLine['close']) > float(kLine['open'])
+    condition4 = bigMa[2] > smallMa[2] and smallMa[0] > bigMa[0] and float(kLine['close']) > float(kLine['open'])
+    if condition1 and condition3 and condition4:
         print('买入信号+1')
         global buySignal
         buySignal = buySignal+1
-    elif smallMa[1] > bigMa[1] and bigMa[0] > smallMa[0]:
+    elif condition2 and smallMa[1] > bigMa[1] and bigMa[0] > smallMa[0]:
         print('卖出信号+1')
         global sellSignal
         sellSignal = sellSignal+1
@@ -104,10 +108,10 @@ def checkSignal():
 def tactics1(operationType):
     print(misc.getTimeStr())
     periodStr = '30min'
-    kLine = getKLine(periodStr,'14')
+    kLine = getKLine(periodStr,'15')
     smallMa = getMa(kLine,3)
     bigMa = getMa(kLine,14)
-    checkCross(smallMa,bigMa)
+    checkCross(operationType,kLine[0],smallMa,bigMa)
     operation,orderId = checkSignal()
     if orderId:
         misc.setConfigKeyValue('config.ini',symbolValue,'type',operation)
@@ -133,14 +137,14 @@ def tactics1(operationType):
         content+='<p>%s</p>' % str(orderInfo)
         content+='</html>'
         misc.sendEmail(mailHost, mailUser, mailPass, receivers, '交易报告', content)
-        
+
 isTrue = True
 while isTrue:
     #获取最后一次操作的类型，buy、sell
     try:
         operationType=misc.getConfigKeyValueByKeyName('config.ini',symbolValue,'type')
         tactics1(operationType)
-        sleepTime=20
+        sleepTime=300
         time.sleep(sleepTime)
     except Exception as e:
         print(e)
