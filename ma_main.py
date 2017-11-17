@@ -28,34 +28,39 @@ sell_signal_max = 4
 
 def get_condition():
     operationType = misc.getConfigKeyValueByKeyName('config.ini', symbol_value, 'type')
-    k_line_15min = api.get_k_line(symbol_value, '15min')
-    k_line_60min = api.get_k_line(symbol_value, '60min')
-    last_close_value = k_line_15min[0]['close']
-    last_ma_value = api.get_ma_line(k_line_15min, 5)[0]
-    slope = api.get_slope_line(api.get_ma_line(k_line_60min, 6))[0]
+    k_line = api.get_k_line(symbol_value, '15min', 10)
+    last_close_value = k_line[0]['close']
+    ma_line = api.get_ma_line(k_line, 5)
+    last_ma_value = ma_line[0]
+    slope_list = api.get_slope_line(ma_line)
+    slope_sum = 0
+    for slope in slope_list:
+        slope_sum = slope_sum + slope
+    slope_sum = round(slope_sum, 4)
     
     condition1 = operationType == 'sell'
     condition2 = last_close_value > last_ma_value #true为买入机会，false为卖出机会
-    condition3 = slope > 0 #当true，为上升趋势，false为下跌趋势
-    print('均线=',last_ma_value,'\t收盘价=',last_close_value,'\t趋势指导=',slope)
-    print('condition1=',condition1,'\tcondition2=',condition2,'\tcondition3=',condition3)
-    return condition1, condition2, condition3
+    condition3 = slope_sum > 0 #true为斜率之和大于0，目前趋势向上，反之向下
+    condition4 = abs(slope_sum) > (float(last_close_value) * 0.0075) #true为波动幅度大于市价的100.75%，波动幅度较大，非横盘震荡、谷底、山顶
+    print('均线 =',last_ma_value,'\n市价 =',last_close_value,'\n斜率之和 =',slope_sum,'\n斜率波动幅度要求 = ',round((float(last_close_value) * 0.0075)))
+    print('最后一次操作为卖出 =',condition1,'\n市价高于均线 =',condition2,'\n斜率之和大于0 =',condition3,'\n波动幅度足够大 =', condition4)
+    return condition1, condition2, condition3, condition4
 
 def main():
     print(misc.getTimeStr())
     
-    condition1, condition2, condition3 = get_condition()
+    condition1, condition2, condition3, condition4 = get_condition()
     order_id = None
     
     global buy_signal
     global sell_signal
-    if condition1 and condition2 and condition3:
+    if condition1 and condition2 and condition4:
         print('买入信号+1')
         buy_signal = buy_signal + 1
     else:
         buy_signal = 0
     
-    if not condition1 and not condition2 and not condition3:
+    if not condition1 and not condition2 and condition4:
         print('卖出信号+1')
         sell_signal = sell_signal + 1
     else:
@@ -96,6 +101,7 @@ def main():
 while True:
     try:
         main()
+        print()
         time.sleep(15)
     except Exception as e:
          print(e)
