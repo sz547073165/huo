@@ -68,7 +68,7 @@ def checkCross(operationType,kLine,smallMa,bigMa):
     condition2 = operationType == 'buy'
     condition3 = bigMa[1] > smallMa[1] and smallMa[0] > bigMa[0] and float(kLine['close']) > float(kLine['open'])
     condition4 = bigMa[2] > smallMa[2] and smallMa[0] > bigMa[0] and float(kLine['close']) > float(kLine['open'])
-    if condition1 and condition3 and condition4:
+    if condition1 and (condition3 or condition4):
         print('买入信号+1')
         global buySignal
         buySignal = buySignal+1

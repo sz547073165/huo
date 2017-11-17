@@ -1,202 +1,103 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Fri Nov  3 21:50:31 2017
+Created on Sat Nov 11 13:01:33 2017
 
 @author: Marco
 """
 
-from person import API_KEY, API_SECRET, mailPass
-import huoBiApi, misc
+import huo_bi_api as api
+import misc
 import time
+from person import mailPass as mail_pass
 
-mailHost = misc.getConfigKeyValueByKeyName('config.ini', 'mail', 'mailHost')
-mailUser = misc.getConfigKeyValueByKeyName('config.ini', 'mail', 'mailUser')
+mail_host = misc.getConfigKeyValueByKeyName('config.ini', 'mail', 'mailHost')
+mail_user = misc.getConfigKeyValueByKeyName('config.ini', 'mail', 'mailUser')
 receivers = misc.getConfigKeyValueByKeyName('config.ini', 'mail', 'receivers').split(',')
 #交易对
-symbolValue='btcusdt'
-moneyName='usdt'
-coinName='btc'
-client = huoBiApi.ApiClient(API_KEY, API_SECRET)
-accs = client.get('/v1/account/accounts')
-accountIdValue = accs[0].id
+symbol_value = 'btcusdt'
+money_name = 'usdt'
+coin_name = 'btc'
+account_id = api.get_account_id()
+global buy_signal
+global sell_signal
+buy_signal = 0
+sell_signal = 0
+buy_signal_max = 4
+sell_signal_max = 4
 
-#获取五日均线斜率
-def getMA5SlopeList():
-    kLine = client.get('/market/history/kline',symbol=symbolValue,period='60min',size='9')
-    '''五日均线'''
-    ma5 = misc.getMALine(kLine,5)
-    '''五日均线斜率'''
-    ma5Slope = misc.getSlope(ma5)
-    return ma5Slope
-
-def getMa5AndCloseAndFatherMa5Slope():
-    kLine = client.get('/market/history/kline',symbol=symbolValue,period='15min',size='5')
-    '''五日均线'''
-    ma5 = misc.getMALine(kLine,5)
-    last = kLine[0]['close']
+def get_condition():
+    operationType = misc.getConfigKeyValueByKeyName('config.ini', symbol_value, 'type')
+    k_line_15min = api.get_k_line(symbol_value, '15min')
+    k_line_60min = api.get_k_line(symbol_value, '60min')
+    last_close_value = k_line_15min[0]['close']
+    last_ma_value = api.get_ma_line(k_line_15min, 5)[0]
+    slope = api.get_slope_line(api.get_ma_line(k_line_60min, 6))[0]
     
-    fatherKLine = client.get('/market/history/kline',symbol=symbolValue,period='60min',size='7')
-    fatherMa5 = misc.getMALine(fatherKLine,6)
-    fatherMa5Slope = misc.getSlope(fatherMa5)
-    return ma5[0], last, fatherMa5Slope[0]
+    condition1 = operationType == 'sell'
+    condition2 = last_close_value > last_ma_value #true为买入机会，false为卖出机会
+    condition3 = slope > 0 #当true，为上升趋势，false为下跌趋势
+    print('均线=',last_ma_value,'\t收盘价=',last_close_value,'\t趋势指导=',slope)
+    print('condition1=',condition1,'\tcondition2=',condition2,'\tcondition3=',condition3)
+    return condition1, condition2, condition3
 
-#判断是否要买入
-def isBuy(slopeList):
-    condition1=slopeList[0] > abs(slopeList[2]) and 0 > slopeList[1] and slopeList[1] > slopeList[2] and slopeList[2] > slopeList[3]
-    condition2=slopeList[0] > 3
-    print('isBuy条件判断情况：','\t',condition1,'\t',condition2)
-    if condition1 or condition2:
-        '''调用买入'''
-        result = place(getBlance(moneyName),'buy-market')
-        if result['status'] == 'ok':
-            '''当status为ok时，返回订单id'''
-            return result['data']
-
-#判断是否要卖出
-def isSell(slopeList):
-    condition1=slopeList[0] < -30
-    condition2=(slopeList[1]+slopeList[2]+slopeList[3]) < -30
-    condition3=slopeList[0] < -20 and 0 < slopeList[1] and slopeList[1] < slopeList[2] and slopeList[2] < slopeList[3]
-    condition4=slopeList[0] < -40 and 0 < slopeList[1] and 0 < slopeList[2] and 0 < slopeList[3]
-    print('isSell条件判断情况：','\t',condition3,'\t',condition4)
-    if condition3 or condition4:
-        '''调用卖出'''
-        result = place(getBlance(coinName),'sell-market')
-        if result['status'] == 'ok':
-            '''当status为ok时，返回订单id'''
-            return result['data']
-
-#查询当前成交、历史成交
-def getMatchResults():
-    matchResults = client.get('/v1/order/matchresults',symbol=symbolValue)
-    return matchResults
-
-#查询当前委托、历史委托
-def getOrders():
-    orders = client.get('/v1/order/orders',symbol=symbolValue,states='filled')
-    return orders
-
-#判断最后一个API订单是买入，还是卖出，成交价格，手续费
-def lastMatchResultIsWhatAndPriceAndFees(matchResults):
-    for i in range(len(matchResults)):
-        matchResult = matchResults[i]
-        source = matchResult['source']
-        symbol = matchResult['symbol']
-        typeValue = matchResult['type']
-        price = matchResult['price']
-        fees = matchResult['filled-fees']
-        if not source == 'web':
-            continue
-        if not symbol == symbolValue:
-            continue
-        if typeValue == 'buy-market' or typeValue == 'buy-limit':
-            return 'buy',price,fees
-        if typeValue == 'sell-market' or typeValue == 'sell-limit':
-            return 'sell',price,fees
-
-#创建并执行一个新订单，返回订单ID
-def place(amount,typeValue):
-    params={}
-    params['account-id']=accountIdValue
-    params['amount']=amount#限价单表示下单数量，市价买单时表示买多少钱，市价卖单时表示卖多少币
-    params['symbol']=symbolValue
-    params['type']=typeValue
-    print(params)
-    return client.post('/v1/order/orders/place',params)
-
-#查询某个订单详情
-def getOrderInfo(orderId):
-    return client.get('/v1/order/orders/%s' % orderId)
-
-#查询最后一个买入订单的成交均价*1.005的价格
-def getLastBuyOrderPrice():
-    matchResults=getMatchResults()
-    for match in matchResults:
-        if match['type']=='buy-market' and match['symbol']==symbolValue:
-            return round(float(match['price']) * 1.01,4)
-
-#获取可用余额，usdt或btc
-def getBlance(currency):
-    subaccs = client.get('/v1/account/accounts/%s/balance' % accountIdValue)
-    for sub in subaccs['list']:
-        if sub['currency'] == currency and sub['type'] == 'trade':
-            return sub['balance']
-
-#字符串截取的方式获取小数点后保留4位的数字
-def getFloatStr(numberStr):
-    pointIndex=numberStr.index('.')
-    flaotStr=numberStr[0:5+pointIndex]
-    return flaotStr
-
-def isBuyOrSellByMa5ValueAndCloseValue(operationType,ma5Value,closeValue,fatherMa5Slope):
-    condition1=ma5Value < closeValue #true为买入机会，false为卖出机会
-    condition2=fatherMa5Slope > 0 #当true，为上升趋势，false为下跌趋势
-    print('均线=',ma5Value,'\t收盘价=',closeValue,'\t趋势指导=',fatherMa5Slope,'\tcondition1=',condition1,'\tcondition2=',condition2)
-    if condition1:
-        if operationType == 'buy':
-            print('已买入，等待卖出机会')
-            return 'buy', None
-        if not condition2:
-            print('下跌趋势不买入')
-            return 'sell', None
-        #买入操作
-        amount=misc.getConfigKeyValueByKeyName('config.ini',symbolValue,'usdt')
-        orderId = place(amount,'buy-market')
-        return 'buy', orderId
+def main():
+    print(misc.getTimeStr())
+    
+    condition1, condition2, condition3 = get_condition()
+    order_id = None
+    
+    global buy_signal
+    global sell_signal
+    if condition1 and condition2 and condition3:
+        print('买入信号+1')
+        buy_signal = buy_signal + 1
     else:
-        if operationType == 'sell':
-            print('已卖出，等待买入机会')
-            return 'sell', None
-        #卖出操作
-        price=getLastBuyOrderPrice()
-        if condition2:
-            if price > closeValue:#上升趋势，且盈利价格>市价时，不卖出
-                print('price=',price)
-                print('closeValue=',closeValue)
-                print('上升趋势，涨幅未超过1%，不卖出')
-                return 'buy', None
-        print('price=',price)
-        print('closeValue=',closeValue)
-        balanceStr=getBlance(coinName)
-        pointIndex=balanceStr.index('.')
-        amount=balanceStr[0:5+pointIndex]
-        orderId = place(amount,'sell-market')
-        return 'sell', orderId
-        
-
-def tactics2(operationType):
-    try:
-        print(misc.getTimeStr())
-        ma5Value, closeValue, fatherMa5Slope= getMa5AndCloseAndFatherMa5Slope()
-        operation,orderId=isBuyOrSellByMa5ValueAndCloseValue(operationType,ma5Value,closeValue,fatherMa5Slope)
-        misc.setConfigKeyValue('config.ini',symbolValue,'type',operation)
-        if orderId:
-            time.sleep(30)
-            if operation == 'sell':
-                tempOrder=getOrderInfo(orderId)
-                fieldCashAmount=float(tempOrder['field-cash-amount'])
-                fieldFees=float(tempOrder['field-fees'])
-                usdt=getFloatStr(str(fieldCashAmount-fieldFees))
-                misc.setConfigKeyValue('config.ini',symbolValue,'usdt',usdt)
-            orderInfo=getMatchResults()[0]
-            print(orderInfo)
-            content='<html>'
-            content+='<p>symbol(交易对)=%s</p>' % orderInfo['symbol']
-            content+='<p>filled-amount(订单数量)=%s</p>' % orderInfo['filled-amount']
-            content+='<p>filled-fees(已成交手续费)=%s</p>' % orderInfo['filled-fees']
-            content+='<p>price(成交价格)=%s</p>' % orderInfo['price']
-            content+='<p>type(订单类型（buy-market：市价买, sell-market：市价卖）)=%s</p>' % orderInfo['type']
-            content+='<p>%s</p>' % str(orderInfo)
-            content+='</html>'
-            misc.sendEmail(mailHost, mailUser, mailPass, receivers, '交易报告', content)
-    except Exception as e:
-        print(e)
-'''main'''
-isTrue=True
-while isTrue:
-    #获取最后一次操作的类型，buy、sell
-    operationType=misc.getConfigKeyValueByKeyName('config.ini',symbolValue,'type')
-    tactics2(operationType)
-    time.sleep(15)
+        buy_signal = 0
     
+    if not condition1 and not condition2 and not condition3:
+        print('卖出信号+1')
+        sell_signal = sell_signal + 1
+    else:
+        sell_signal = 0
+    
+    if buy_signal >= buy_signal_max:
+        #买入操作
+        amount = misc.getConfigKeyValueByKeyName('config.ini', symbol_value, 'usdt')
+        order_id = api.do_place(account_id, amount, symbol_value, 'buy-market')
+        buy_signal = 0
+    
+    if sell_signal >= sell_signal_max:
+        #卖出操作
+        amount = api.get_balance(account_id, coin_name)
+        order_id = api.do_place(account_id, amount, symbol_value, 'sell-market')
+        sell_signal = 0
+        
+    if order_id:
+        time.sleep(10)
+        order_detail = api.get_order_detail(order_id)[0]
+        content='<html>'
+        content+='<p>symbol(交易对)=%s</p>' % order_detail['symbol']
+        content+='<p>price(成交价格)=%s</p>' % order_detail['price']
+        content+='<p>filled-amount(订单数量)=%s</p>' % order_detail['filled-amount']
+        content+='<p>filled-fees(已成交手续费)=%s</p>' % order_detail['filled-fees']
+        content+='<p>type(订单类型（buy-market：市价买, sell-market：市价卖）)=%s</p>' % order_detail['type']
+        content+='<p>created-at(交易时间)=%s</p>' % misc.getTimeStrWithUnixTimestamp(int(order_detail['created-at'][0:10]))
+        content+='<p>%s</p>' % str(order_detail)
+        content+='</html>'
+        misc.sendEmail(mail_host, mail_user, mail_pass, receivers, '%s_%s_交易报告' % (symbol_value, order_detail['type']), content)
+        if order_detail['type'] == 'buy-market':
+            misc.setConfigKeyValue('config.ini', symbol_value, 'type', 'buy')
+        if order_detail['type'] == 'sell-market':
+            misc.setConfigKeyValue('config.ini', symbol_value, 'type', 'sell')
+            usdt = misc.get_float_str(float(order_detail['filled-amount']) - float(order_detail['filled-fees']))
+            misc.setConfigKeyValue('config.ini',symbol_value,'usdt',usdt)
+        
+while True:
+    try:
+        main()
+        time.sleep(15)
+    except Exception as e:
+         print(e)
+
+
