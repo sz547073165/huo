@@ -45,3 +45,18 @@ print(slope_sum)
 close_value = k_line[0]['close']
 print('close_value =',close_value)
 print('close_value * 0.5% =',float(close_value) * 0.005)
+
+order_list = api.get_match_results('bccbtc')
+print(order_list)
+order_info = order_list[0]
+print(order_info)
+
+order_id = '193052332'
+order_detail = api.get_order_detail(order_id)[0]
+print(order_detail)
+amount = float(order_detail['filled-amount'])
+fees = float(order_detail['filled-fees'])
+print(amount)
+print(fees)
+usdt = misc.get_float_str(str(float(order_detail['filled-amount']) - float(order_detail['filled-fees'])))
+print(usdt)
