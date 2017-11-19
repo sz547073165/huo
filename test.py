@@ -15,9 +15,9 @@ mail_host = misc.getConfigKeyValueByKeyName('config.ini', 'mail', 'mailHost')
 mail_user = misc.getConfigKeyValueByKeyName('config.ini', 'mail', 'mailUser')
 receivers = misc.getConfigKeyValueByKeyName('config.ini', 'mail', 'receivers').split(',')
 #交易对
-symbol_value = 'btcusdt'
-money_name = 'usdt'
-coin_name = 'btc'
+symbol_value = 'bccbtc'
+money_name = 'btc'
+coin_name = 'bcc'
 account_id = api.get_account_id()
 global buy_signal
 global sell_signal
@@ -26,37 +26,18 @@ sell_signal = 0
 buy_signal_max = 4
 sell_signal_max = 4
 
-def get_condition():
-    operationType = misc.getConfigKeyValueByKeyName('config.ini', symbol_value, 'type')
-    k_line = api.get_k_line(symbol_value, '15min')
-    
-    
+usdt = api.get_balance(account_id,'usdt')
+btc = api.get_balance(account_id,'btc')
+bcc = api.get_balance(account_id,'bcc')
+print('usdt = %s' % usdt)
+print('btc  = %s' % btc)
+print('bcc  = %s' % bcc)
 
-k_line = api.get_k_line(symbol_value, '15min', 10)
-#print(k_line)
-ma_line = api.get_ma_line(k_line, 5)
-#print(ma_line)
-slope_line = api.get_slope_line(ma_line)
-print(slope_line)
-slope_sum = 0
-for slope in slope_line:
-    slope_sum = slope_sum + slope
-print(slope_sum)
-close_value = k_line[0]['close']
-print('close_value =',close_value)
-print('close_value * 0.5% =',float(close_value) * 0.005)
+order_list = api.get_match_results(symbol_value)
+print(order_list[0])
+print(order_list[1])
 
-order_list = api.get_match_results('bccbtc')
-print(order_list)
-order_info = order_list[0]
-print(order_info)
-
-order_id = '193052332'
-order_detail = api.get_order_detail(order_id)[0]
-print(order_detail)
-amount = float(order_detail['filled-amount'])
-fees = float(order_detail['filled-fees'])
-print(amount)
-print(fees)
-usdt = misc.get_float_str(str(float(order_detail['filled-amount']) - float(order_detail['filled-fees'])))
-print(usdt)
+price_buy = float(misc.getConfigKeyValueByKeyName('config.ini',symbol_value,'price_buy'))
+price_sell = float(misc.getConfigKeyValueByKeyName('config.ini', symbol_value,'price_sell'))
+content='<p>盈亏=%.4f%%</p>' % ((price_sell / price_buy - 1 - 0.005) * 100)
+print(content)

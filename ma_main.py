@@ -103,15 +103,21 @@ def main():
         order_detail = api.get_order_detail(order_id)[0]
         if order_detail['type'] == 'buy-market':
             misc.setConfigKeyValue('config.ini', symbol_value, 'type', 'buy')
+            misc.setConfigKeyValue('config.ini', symbol_value, 'price_buy', order_detail['price'])
         if order_detail['type'] == 'sell-market':
             misc.setConfigKeyValue('config.ini', symbol_value, 'type', 'sell')
+            misc.setConfigKeyValue('config.ini', symbol_value, 'price_sell', order_detail['price'])
         content='<html>'
+        content+='<p>created-at(交易时间)=%s</p>' % misc.getTimeStrWithUnixTimestamp(int(order_detail['created-at']/1000))
         content+='<p>symbol(交易对)=%s</p>' % order_detail['symbol']
         content+='<p>price(成交价格)=%s</p>' % order_detail['price']
-        content+='<p>filled-amount(订单数量)=%s</p>' % order_detail['filled-amount']
-        content+='<p>filled-fees(已成交手续费)=%s</p>' % order_detail['filled-fees']
+        if order_detail['type'] == 'sell-market':
+            price_buy = float(misc.getConfigKeyValueByKeyName('config.ini',symbol_value,'price_buy'))
+            price_sell = float(misc.getConfigKeyValueByKeyName('config.ini', symbol_value,'price_sell'))
+            content='<p>盈亏=%.4f%%</p>' % ((price_sell / price_buy - 1 - 0.005) * 100)
+        #content+='<p>filled-amount(订单数量)=%s</p>' % order_detail['filled-amount']
+        #content+='<p>filled-fees(已成交手续费)=%s</p>' % order_detail['filled-fees']
         content+='<p>type(订单类型（buy-market：市价买, sell-market：市价卖）)=%s</p>' % order_detail['type']
-        content+='<p>created-at(交易时间)=%s</p>' % misc.getTimeStrWithUnixTimestamp(int(order_detail['created-at']/1000))
         content+='<p>%s</p>' % str(order_detail)
         content+='<p>1-最后一次操作为卖出 = %s</p>' % condition1
         content+='<p>2-市价高于均线 = %s</p>' % condition2
