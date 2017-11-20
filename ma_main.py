@@ -24,7 +24,7 @@ global buy_signal
 global sell_signal
 buy_signal = 0
 sell_signal = 0
-buy_signal_max = 4
+buy_signal_max = 5
 sell_signal_max = 8
 
 def get_condition():
@@ -34,6 +34,8 @@ def get_condition():
     ma_line = api.get_ma_line(k_line, 4)
     last_ma_value = ma_line[0]
     slope_list = api.get_slope_line(ma_line)
+    print(slope_list)
+    slope_list[0] = slope_list[0] * 1.01
     print(slope_list)
     slope_sum = 0
     for slope in slope_list:
@@ -45,11 +47,12 @@ def get_condition():
     condition1 = operationType == 'sell'
     condition2 = last_close_value > last_ma_value #true为买入机会，false为卖出机会
     condition3 = slope_sum > 0 #true为斜率之和大于0，目前趋势向上，反之向下
-    time_value = 0.0190
+    time_value = 0.0150
     condition4 = abs(slope_sum) > (float(last_close_value) * time_value) #true为波动幅度大于市价的100.75%，波动幅度较大，非横盘震荡、谷底、山顶
     condition5 = slope_sum_last > slope_sum_early#斜率后半段大于前半段
     condition6 = last_close_value > k_line[0]['open'] #true收盘价大于开盘价，阳线
-    condition7 = slope_sum_last > 0 and condition5 #斜率后半段为正
+    condition7 = slope_sum_last > 0 #后半段斜率之和为正
+    condition8 = slope_sum_early < 0 #前半段斜率之和为负
     print('均线 = %s' % last_ma_value)
     print('市价 = %s' % last_close_value)
     print('斜率之和 = %s' % slope_sum)
@@ -61,25 +64,26 @@ def get_condition():
     print('3-斜率之和大于0 = %s' % condition3)
     print('4-波动幅度足够大 = %s' % condition4)
     print('5-后半段斜率之和大于前半段三斜率之和 = %s' % condition5)
+    print('8-前半段斜率之和小于0 = %s' % condition8)
     print('7-后半段斜率之和大于0 = %s' % condition7)
     print('6-是否阳线 = %s' % condition6)
-    return condition1, condition2, condition3, condition4, condition5, condition6, condition7
+    return condition1, condition2, condition3, condition4, condition5, condition6, condition7, condition8
 
 def main():
     print(misc.getTimeStr())
     
-    condition1, condition2, condition3, condition4, condition5, condition6, condition7 = get_condition()
+    condition1, condition2, condition3, condition4, condition5, condition6, condition7, condition8 = get_condition()
     order_id = None
     
     global buy_signal
     global sell_signal
-    if condition1 and condition2 and ((condition3 and condition4) or (not condition4 and condition7)) and condition6:
+    if condition1 and condition2 and ((condition3 and condition4) or (not condition4 and condition5 and condition7)) and condition6:
         print('买入信号+1')
         buy_signal = buy_signal + 1
     else:
         buy_signal = 0
     
-    if not condition1 and not condition2 and not condition5: #(condition4 or (not condition4 and not condition5)):
+    if not condition1 and not condition2 and not condition6: #(condition4 or (not condition4 and not condition5)):
         print('卖出信号+1')
         sell_signal = sell_signal + 1
     else:
@@ -114,7 +118,7 @@ def main():
         if order_detail['type'] == 'sell-market':
             price_buy = float(misc.getConfigKeyValueByKeyName('config.ini',symbol_value,'price_buy'))
             price_sell = float(misc.getConfigKeyValueByKeyName('config.ini', symbol_value,'price_sell'))
-            content='<p>盈亏=%.4f%%</p>' % ((price_sell / price_buy - 1 - 0.005) * 100)
+            content+='<p>盈亏=%.4f%%</p>' % ((price_sell / price_buy - 1 - 0.005) * 100)
         #content+='<p>filled-amount(订单数量)=%s</p>' % order_detail['filled-amount']
         #content+='<p>filled-fees(已成交手续费)=%s</p>' % order_detail['filled-fees']
         content+='<p>type(订单类型（buy-market：市价买, sell-market：市价卖）)=%s</p>' % order_detail['type']
