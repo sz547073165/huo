@@ -25,7 +25,7 @@ global sell_signal
 buy_signal = 0
 sell_signal = 0
 buy_signal_max = 5
-sell_signal_max = 8
+sell_signal_max = 5
 
 def get_condition():
     operationType = misc.getConfigKeyValueByKeyName('config.ini', symbol_value, 'type')
@@ -35,7 +35,7 @@ def get_condition():
     last_ma_value = ma_line[0]
     slope_list = api.get_slope_line(ma_line)
     print(slope_list)
-    slope_list[0] = slope_list[0] * 1.01
+    slope_list[0] = slope_list[0] * 1.075
     print(slope_list)
     slope_sum = 0
     for slope in slope_list:
@@ -112,13 +112,13 @@ def main():
             misc.setConfigKeyValue('config.ini', symbol_value, 'type', 'sell')
             misc.setConfigKeyValue('config.ini', symbol_value, 'price_sell', order_detail['price'])
         content='<html>'
-        content+='<p>created-at(交易时间)=%s</p>' % misc.getTimeStrWithUnixTimestamp(int(order_detail['created-at']/1000))
-        content+='<p>symbol(交易对)=%s</p>' % order_detail['symbol']
-        content+='<p>price(成交价格)=%s</p>' % order_detail['price']
         if order_detail['type'] == 'sell-market':
             price_buy = float(misc.getConfigKeyValueByKeyName('config.ini',symbol_value,'price_buy'))
             price_sell = float(misc.getConfigKeyValueByKeyName('config.ini', symbol_value,'price_sell'))
             content+='<p>盈亏=%.4f%%</p>' % ((price_sell / price_buy - 1 - 0.005) * 100)
+        content+='<p>created-at(交易时间)=%s</p>' % misc.getTimeStrWithUnixTimestamp(int(order_detail['created-at']/1000))
+        content+='<p>symbol(交易对)=%s</p>' % order_detail['symbol']
+        content+='<p>price(成交价格)=%s</p>' % order_detail['price']
         #content+='<p>filled-amount(订单数量)=%s</p>' % order_detail['filled-amount']
         #content+='<p>filled-fees(已成交手续费)=%s</p>' % order_detail['filled-fees']
         content+='<p>type(订单类型（buy-market：市价买, sell-market：市价卖）)=%s</p>' % order_detail['type']
@@ -130,6 +130,8 @@ def main():
         content+='<p>5-后半段斜率之和大于前半段三斜率之和 = %s</p>' % condition5
         content+='<p>7-后半段斜率之和大于0 = %s</p>' % condition7
         content+='<p>6-是否阳线 = %s</p>' % condition6
+        content+='<p>condition1 and condition2 and ((condition3 and condition4) or (not condition4 and condition5 and condition7)) and condition6</p>'
+        content+='<p>not condition1 and not condition2 and not condition6</p>'
         content+='</html>'
         misc.sendEmail(mail_host, mail_user, mail_pass, receivers, '%s_%s_交易报告' % (symbol_value, order_detail['type']), content)
         

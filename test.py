@@ -53,5 +53,5 @@ ma_line = api.get_ma_line(k_line, 4)
 last_ma_value = ma_line[0]
 slope_list = api.get_slope_line(ma_line)
 print(slope_list[0])
-slope_list[0] = slope_list[0] * 1.01
+slope_list[0] = slope_list[0] * 1.1
 print(slope_list[0])
