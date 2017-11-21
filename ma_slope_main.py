@@ -60,7 +60,7 @@ def get_sell_condition():
     b_value = float(misc.getConfigKeyValueByKeyName('config.ini', symbol_value, 'b_value'))
     y_value = k_value * x_value + b_value
     if(k_line_1_close > y_value * up_point):
-        y_value_repair =y_value + (k_line_1_close - y_value) / 3
+        y_value_repair =y_value + (k_line_1_close - y_value) / 10
         k_value_repair = (y_value_repair - b_value) / x_value
         print('原始k k_value=%s' % k_value)
         print('斜率k修正 k_value_repair=%s' % k_value_repair)
