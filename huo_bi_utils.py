@@ -97,7 +97,7 @@ class ApiClient(object):
         with request.urlopen(req, timeout=TIMEOUT) as resp:
             if resp.getcode()!=200:
                 raise ApiNetworkError('Bad response code: %s %s' % (resp.getcode(), resp.reason))
-            return self._parse(resp.read())
+            return self._parse(resp.read().decode('utf-8'))
 
     def _parse(self, text):
         # print('Response:\n%s' % text)
