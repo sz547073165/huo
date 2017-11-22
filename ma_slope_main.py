@@ -124,7 +124,7 @@ def main():
             misc.setConfigKeyValue('config.ini', symbol_value, 'type', 'buy')
             misc.setConfigKeyValue('config.ini', symbol_value, 'price_buy', order_detail['price'])
             misc.setConfigKeyValue('config.ini', symbol_value, 'b_value', ma_line[1])
-            misc.setConfigKeyValue('config.ini', symbol_value, 'k_value', ßma_line[0]-ma_line[1])
+            misc.setConfigKeyValue('config.ini', symbol_value, 'k_value', ma_line[0]-ma_line[1])
             misc.setConfigKeyValue('config.ini', symbol_value, 'k_line_time', k_line_1_id)
         if order_detail['type'] == 'sell-market':
             misc.setConfigKeyValue('config.ini', symbol_value, 'type', 'sell')
