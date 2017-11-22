@@ -46,6 +46,9 @@ def get_buy_condition():
     condition1 = last_close_value > last_ma_value #市价在均线之上
     condition2 = last_close_value > k_line[0]['open'] #true收盘价大于开盘价，阳线
     condition3 = slope_sum_last > slope_sum_early and slope_sum_last > 0 #斜率后半段大于前半段，且大于0
+    print('市价在均线之上 = %s' % condition1)
+    print('阳线 = %s' % condition2)
+    print('斜率后半段大于前半段，且大于0 = %s' % condition3)
     return k_line_1_id, ma_line, slope_list, condition1, condition2, condition3
 
 def get_sell_condition():
