@@ -64,7 +64,7 @@ def setConfigKeyValue(fileName, section, keyName, keyValue):
         conf.add_section(section)
     except:
         pass
-    conf.set(section, keyName, keyValue)
+    conf.set(section, keyName, str(keyValue))
     conf.write(open(fileName,'w'))
 
 '''发送邮件'''
