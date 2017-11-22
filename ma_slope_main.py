@@ -26,7 +26,7 @@ sell_signal = 0
 buy_signal_max = 3
 sell_signal_max = 3
 up_point = 1.01654
-down_point = 0.991728
+down_point = 0.99487929#0.991728
 
 def get_buy_condition():
     k_line = api.get_k_line(symbol_value, period_value, 8)
