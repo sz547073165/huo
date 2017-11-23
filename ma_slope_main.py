@@ -6,6 +6,7 @@ Created on Tue Nov 21 16:13:03 2017
 """
 
 import huo_bi_api as api
+from huo_bi_utils import ApiError, ApiNetworkError
 import misc
 import time
 from person import mailPass as mail_pass
@@ -13,22 +14,9 @@ from person import mailPass as mail_pass
 mail_host = misc.getConfigKeyValueByKeyName('config.ini', 'mail', 'mailHost')
 mail_user = misc.getConfigKeyValueByKeyName('config.ini', 'mail', 'mailUser')
 receivers = misc.getConfigKeyValueByKeyName('config.ini', 'mail', 'receivers').split(',')
-#交易对
-symbol_value = 'btcusdt'
-money_name = 'usdt'
-coin_name = 'btc'
-period_value = '60min'
-account_id = api.get_account_id()
-global buy_signal
-global sell_signal
-buy_signal = 0
-sell_signal = 0
-buy_signal_max = 3
-sell_signal_max = 3
-up_point = 1.01654
-down_point = 0.99487929#0.991728
 
-def get_buy_condition():
+def get_buy_condition(symbol_value):
+    period_value = misc.getConfigKeyValueByKeyName('config.ini', 'config', 'period_value')
     k_line = api.get_k_line(symbol_value, period_value, 8)
     k_line_1_id = k_line[1]['id']
     last_close_value = k_line[0]['close']
@@ -51,7 +39,8 @@ def get_buy_condition():
     print('斜率后半段大于前半段，且大于0 = %s' % condition3)
     return k_line_1_id, ma_line, slope_list, condition1, condition2, condition3
 
-def get_sell_condition():
+def get_sell_condition(symbol_value):
+    period_value = misc.getConfigKeyValueByKeyName('config.ini', 'config', 'period_value')
     k_line = api.get_k_line(symbol_value, period_value, 11)
     k_line_0_close = k_line[0]['close']
     condition1 = k_line_0_close < k_line[0]['open']#阴线
@@ -82,53 +71,67 @@ def get_sell_condition():
     else:
         return False and condition1
     
-def main():
+def main(symbol_value):
     print(misc.getTimeStr())
+    print(symbol_value)
     operationType = misc.getConfigKeyValueByKeyName('config.ini', symbol_value, 'type')
+    buy_signal = int(misc.getConfigKeyValueByKeyName('config.ini', symbol_value, 'buy_signal'))
+    sell_signal = int(misc.getConfigKeyValueByKeyName('config.ini', symbol_value, 'sell_signal'))
+    buy_signal_max = int(misc.getConfigKeyValueByKeyName('config.ini', symbol_value, 'buy_signal_max'))
+    sell_signal_max = int(misc.getConfigKeyValueByKeyName('config.ini', symbol_value, 'sell_signal_max'))
     condition = operationType == 'sell'
-    global buy_signal
-    global sell_signal
     order_id = None
     if condition:#买入判断
-        k_line_1_id, ma_line, slope_list, condition1, condition2, condition3 = get_buy_condition()
+        k_line_1_id, ma_line, slope_list, condition1, condition2, condition3 = get_buy_condition(symbol_value)
         if condition1 and condition2 and condition3:
             print('买入信号+1')
             buy_signal = buy_signal + 1
+            misc.setConfigKeyValue('config.ini', symbol_value, 'buy_signal', buy_signal)
         else:
             buy_signal = 0
+            misc.setConfigKeyValue('config.ini', symbol_value, 'buy_signal', buy_signal)
     else:#卖出判断
-        condition = get_sell_condition()
+        condition = get_sell_condition(symbol_value)
         if condition:
             print('卖出信号+1')
             sell_signal = sell_signal + 1
+            misc.setConfigKeyValue('config.ini', symbol_value, 'sell_signal', sell_signal)
         else:
             sell_signal = 0
+            misc.setConfigKeyValue('config.ini', symbol_value, 'sell_signal', sell_signal)
     
     if buy_signal >= buy_signal_max:
         #买入操作
-        #amount = misc.getConfigKeyValueByKeyName('config.ini', symbol_value, 'usdt')
-        amount = api.get_balance(account_id, money_name)
+        amount = misc.getConfigKeyValueByKeyName('config.ini', symbol_value, 'money_value')
+        #amount = api.get_balance(account_id, money_name)
         order_id = api.do_place(account_id, amount, symbol_value, 'buy-market')
         buy_signal = 0
+        misc.setConfigKeyValue('config.ini', symbol_value, 'buy_signal', buy_signal)
         
     if sell_signal >= sell_signal_max:
         #卖出操作
+        coin_name = misc.getConfigKeyValueByKeyName('config.ini', symbol_value, 'coin_name')
         amount = api.get_balance(account_id, coin_name)
         order_id = api.do_place(account_id, amount, symbol_value, 'sell-market')
         sell_signal = 0
+        misc.setConfigKeyValue('config.ini', symbol_value, 'sell_signal', sell_signal)
     
     if order_id:
-        time.sleep(10)
+        time.sleep(2)
         order_detail = api.get_order_detail(order_id)[0]
         if order_detail['type'] == 'buy-market':
             misc.setConfigKeyValue('config.ini', symbol_value, 'type', 'buy')
             misc.setConfigKeyValue('config.ini', symbol_value, 'price_buy', order_detail['price'])
-            misc.setConfigKeyValue('config.ini', symbol_value, 'b_value', float(order_detail['price'])-ma_line[0]-ma_line[1])
+            misc.setConfigKeyValue('config.ini', symbol_value, 'b_value', float(order_detail['price'])-ma_line[0]+ma_line[1])
             misc.setConfigKeyValue('config.ini', symbol_value, 'k_value', ma_line[0]-ma_line[1])
             misc.setConfigKeyValue('config.ini', symbol_value, 'k_line_time', k_line_1_id)
+            coin_value = misc.get_float_str(str(float(order_detail['filled-amount']) - float(order_detail['filled-fees'])))
+            misc.setConfigKeyValue('config.ini', symbol_value, 'coin_value', coin_value)
         if order_detail['type'] == 'sell-market':
             misc.setConfigKeyValue('config.ini', symbol_value, 'type', 'sell')
             misc.setConfigKeyValue('config.ini', symbol_value, 'price_sell', order_detail['price'])
+            money_value = misc.get_float_str(str(float(order_detail['filled-amount']) - float(order_detail['filled-fees'])))
+            misc.setConfigKeyValue('config.ini', symbol_value, 'money_value', money_value)
         content='<html>'
         if order_detail['type'] == 'sell-market':
             price_buy = float(misc.getConfigKeyValueByKeyName('config.ini',symbol_value,'price_buy'))
@@ -139,20 +142,31 @@ def main():
         content+='<p>price(成交价格)=%s</p>' % order_detail['price']
         #content+='<p>filled-amount(订单数量)=%s</p>' % order_detail['filled-amount']
         #content+='<p>filled-fees(已成交手续费)=%s</p>' % order_detail['filled-fees']
-        content+='<p>type(订单类型（buy-market：市价买, sell-market：市价卖）)=%s</p>' % order_detail['type']
+        content+='<p>type(订单类型)=%s</p>' % order_detail['type']
         content+='<p>%s</p>' % str(order_detail)
         content+='</html>'
-        misc.sendEmail(mail_host, mail_user, mail_pass, receivers, '%s_%s_交易报告' % (symbol_value, order_detail['type']), content)
+        misc.sendEmail(mail_host, mail_user, mail_pass, receivers, '%s_%s_transaction_report' % (symbol_value, order_detail['type']), content)
 
+#交易对
+symbol_value_list = ['bccbtc','ethbtc','ltcbtc','dashbtc','etcbtc']
+account_id = api.get_account_id()
+up_point = float(misc.getConfigKeyValueByKeyName('config.ini', 'config', 'up_point'))
+down_point = float(misc.getConfigKeyValueByKeyName('config.ini', 'config', 'down_point'))
+for symbol_value in symbol_value_list:
+    misc.setConfigKeyValue('config.ini', symbol_value, 'buy_signal', '0')
+    misc.setConfigKeyValue('config.ini', symbol_value, 'sell_signal', '0')
 while True:
     try:
-        main()
-        print()
+        for symbol_value in symbol_value_list:
+            main(symbol_value)
+            print()
         time.sleep(60)
     except Exception as e:
-         print(e)
-
-
+        print(e)
+    except ApiError as e:
+        print(e)
+    except ApiNetworkError as e:
+        print(e)
 
         
     

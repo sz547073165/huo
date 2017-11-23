@@ -33,5 +33,10 @@ print('usdt = %s' % usdt)
 print('btc  = %s' % btc)
 print('bcc  = %s' % bcc)
 
-order_list = api.get_match_results(symbol_value)
-print(order_list)
+
+order_detail = api.get_order_detail(210157698)[0]
+print(order_detail)
+
+value = 0.1562
+print(1.01654 * value)
+print(0.99487929 * value)

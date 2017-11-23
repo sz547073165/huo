@@ -40,7 +40,7 @@ def getSlope(MALine):
         slope.append(round(MALine[i]-MALine[i+1],4))
     return slope
 
-'''字符串截取的方式获取小数点后保留4位的数字'''
+'''字符串截取的方式获取小数点后保留4位的数字，返回字符串'''
 def get_float_str(number_str):
     point_index=number_str.index('.')
     float_str=number_str[0:5 + point_index]
