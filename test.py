@@ -34,10 +34,4 @@ print('btc  = %s' % btc)
 print('bcc  = %s' % bcc)
 
 order_list = api.get_match_results(symbol_value)
-
-k_line = api.get_k_line(symbol_value, '60min',20)
-print(k_line)
-ma_line = api.get_ma_line(k_line, 4)
-print(ma_line)
-slope_list = api.get_slope_line(ma_line)
-print(slope_list)
+print(order_list)
