@@ -33,7 +33,8 @@ def get_buy_condition(symbol_value):
 
     condition1 = last_close_value > last_ma_value #市价在均线之上
     condition2 = last_close_value > k_line[0]['open'] #true收盘价大于开盘价，阳线
-    condition3 = slope_sum_last > slope_sum_early and slope_sum_last > 0 #斜率后半段大于前半段，且大于0
+    #condition3 = slope_sum_last > slope_sum_early and slope_sum_last > 0 #斜率后半段大于前半段，且大于0
+    condition3 = slope_list[0] > 0
     print('市价在均线之上 = %s' % condition1)
     print('阳线 = %s' % condition2)
     print('斜率后半段大于前半段，且大于0 = %s' % condition3)
@@ -60,7 +61,7 @@ def get_sell_condition(symbol_value):
         price_max = k_line_0_close
     if price_min > k_line_0_close:
         return True
-    if price_low > k_line_0_close and k_line_0_close > price_buy * (1 + down_percent):
+    if price_low > k_line_0_close:
         return True
     else:
         return False
@@ -121,6 +122,7 @@ def main(symbol_value):
             misc.setConfigKeyValue('config.ini', symbol_value, 'price_sell', order_detail['price'])
             money_value = misc.get_float_str(str(float(order_info['field-cash-amount']) - float(order_info['field-fees'])),6)
             misc.setConfigKeyValue('config.ini', symbol_value, 'money_value', money_value)
+        '''
         content='<html>'
         if order_detail['type'] == 'sell-market':
             price_buy = float(misc.getConfigKeyValueByKeyName('config.ini',symbol_value,'price_buy'))
@@ -135,10 +137,10 @@ def main(symbol_value):
         content+='<p>%s</p>' % str(order_detail)
         content+='</html>'
         misc.sendEmail(mail_host, mail_user, mail_pass, receivers, '%s_%s_transaction_report' % (symbol_value, order_detail['type']), content)
-
+        '''
 
 #交易对
-symbol_value_list = ['bccbtc','ethbtc','ltcbtc','dashbtc','etcbtc']
+symbol_value_list = ['bccbtc','ethbtc','dashbtc', 'ltcbtc', 'etcbtc']#
 account_id = api.get_account_id()
 down_percent = float(misc.getConfigKeyValueByKeyName('config.ini', 'config', 'down_percent'))
 down_percent_max = float(misc.getConfigKeyValueByKeyName('config.ini', 'config', 'down_percent_max'))
@@ -152,8 +154,11 @@ while True:
             print()
         except Exception as e:
             print(e)
+            misc.sendEmail(mail_host, mail_user, mail_pass, receivers, 'error_report_%s' % misc.getTimeStr(), e)
         except ApiError as e:
             print(e)
+            misc.sendEmail(mail_host, mail_user, mail_pass, receivers, 'error_report_%s' % misc.getTimeStr(), e)
         except ApiNetworkError as e:
             print(e)
+            misc.sendEmail(mail_host, mail_user, mail_pass, receivers, 'error_report_%s' % misc.getTimeStr(), e)
     time.sleep(60)
