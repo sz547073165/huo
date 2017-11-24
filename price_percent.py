@@ -45,8 +45,8 @@ def get_sell_condition(symbol_value):
     price_max = float(misc.getConfigKeyValueByKeyName('config.ini', symbol_value, 'price_max'))
     k_line = api.get_k_line(symbol_value, period_value, 11)
     k_line_0_close = k_line[0]['close']
-    price_low = price_max * (1 - down_perscent)
-    price_min = price_buy * (1 - down_perscent_max)
+    price_low = price_max * (1 - down_percent)
+    price_min = price_buy * (1 - down_percent_max)
     print('price_buy = %s' % price_buy)
     print('price_max = %s' % price_max)
     print('price_low = %s' % price_low)
@@ -60,7 +60,7 @@ def get_sell_condition(symbol_value):
         price_max = k_line_0_close
     if price_min > k_line_0_close:
         return True
-    if price_low > k_line_0_close and k_line_0_close > price_buy * (1 + down_persent):
+    if price_low > k_line_0_close and k_line_0_close > price_buy * (1 + down_percent):
         return True
     else:
         return False
@@ -116,9 +116,10 @@ def main(symbol_value):
             coin_value = misc.get_float_str(str(float(order_detail['filled-amount']) - float(order_detail['filled-fees'])))
             misc.setConfigKeyValue('config.ini', symbol_value, 'coin_value', coin_value)
         if order_detail['type'] == 'sell-market':
+            order_info = api.get_order_info(order_id)
             misc.setConfigKeyValue('config.ini', symbol_value, 'type', 'sell')
             misc.setConfigKeyValue('config.ini', symbol_value, 'price_sell', order_detail['price'])
-            money_value = misc.get_float_str(str(float(order_detail['filled-amount']) - float(order_detail['filled-fees'])))
+            money_value = misc.get_float_str(str(float(order_info['field-cash-amount']) - float(order_info['field-fees'])),6)
             misc.setConfigKeyValue('config.ini', symbol_value, 'money_value', money_value)
         content='<html>'
         if order_detail['type'] == 'sell-market':
@@ -139,20 +140,20 @@ def main(symbol_value):
 #交易对
 symbol_value_list = ['bccbtc','ethbtc','ltcbtc','dashbtc','etcbtc']
 account_id = api.get_account_id()
-down_perscent = float(misc.getConfigKeyValueByKeyName('config.ini', 'config', 'down_perscent'))
-down_perscent_max = float(misc.getConfigKeyValueByKeyName('config.ini', 'config', 'down_perscent_max'))
+down_percent = float(misc.getConfigKeyValueByKeyName('config.ini', 'config', 'down_percent'))
+down_percent_max = float(misc.getConfigKeyValueByKeyName('config.ini', 'config', 'down_percent_max'))
 for symbol_value in symbol_value_list:
     misc.setConfigKeyValue('config.ini', symbol_value, 'buy_signal', '0')
     misc.setConfigKeyValue('config.ini', symbol_value, 'sell_signal', '0')
 while True:
-    try:
-        for symbol_value in symbol_value_list:
+    for symbol_value in symbol_value_list:
+        try:
             main(symbol_value)
             print()
-        time.sleep(60)
-    except Exception as e:
-        print(e)
-    except ApiError as e:
-        print(e)
-    except ApiNetworkError as e:
-        print(e)
+        except Exception as e:
+            print(e)
+        except ApiError as e:
+            print(e)
+        except ApiNetworkError as e:
+            print(e)
+    time.sleep(60)

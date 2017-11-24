@@ -41,9 +41,9 @@ def getSlope(MALine):
     return slope
 
 '''字符串截取的方式获取小数点后保留4位的数字，返回字符串'''
-def get_float_str(number_str):
+def get_float_str(number_str,num=4):
     point_index=number_str.index('.')
-    float_str=number_str[0:5 + point_index]
+    float_str=number_str[0:num + 1 + point_index]
     return float_str
 
 '''读取配置文件的key所对应的value'''
