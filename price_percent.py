@@ -59,9 +59,9 @@ def get_sell_condition(symbol_value):
         misc.setConfigKeyValue('config.ini', symbol_value, 'price_max', k_line_0_close)
         price_max = k_line_0_close
     if price_min > k_line_0_close:
-        return True and condition1
-    if price_low > k_line_0_close and k_line_0_close > price_buy * (1 + 0.01):
-        return True and condition1
+        return True
+    if price_low > k_line_0_close and k_line_0_close > price_buy * (1 + down_persent):
+        return True
     else:
         return False
 
