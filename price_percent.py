@@ -46,12 +46,13 @@ def get_sell_condition(symbol_value):
     k_line = api.get_k_line(symbol_value, period_value, 11)
     k_line_0_close = k_line[0]['close']
     price_low = price_max * (1 - down_perscent)
-    price_min = price_buy * (1 - down_perscent)
+    price_min = price_buy * (1 - down_perscent_max)
     print('price_buy = %s' % price_buy)
     print('price_max = %s' % price_max)
     print('price_low = %s' % price_low)
     print('price_min = %s' % price_min)
     print('close = %s' % k_line_0_close)
+    print('percent = %.4f%%' % ((k_line_0_close / price_buy - 1) * 100))
     condition1 = k_line_0_close < k_line[0]['open']#阴线
     print('阴线 = %s' % condition1)
     if k_line_0_close > price_max:
@@ -139,6 +140,7 @@ def main(symbol_value):
 symbol_value_list = ['bccbtc','ethbtc','ltcbtc','dashbtc','etcbtc']
 account_id = api.get_account_id()
 down_perscent = float(misc.getConfigKeyValueByKeyName('config.ini', 'config', 'down_perscent'))
+down_perscent_max = float(misc.getConfigKeyValueByKeyName('config.ini', 'config', 'down_perscent_max'))
 for symbol_value in symbol_value_list:
     misc.setConfigKeyValue('config.ini', symbol_value, 'buy_signal', '0')
     misc.setConfigKeyValue('config.ini', symbol_value, 'sell_signal', '0')
