@@ -23,7 +23,6 @@ def get_buy_condition(symbol_value):
     ma_line = api.get_ma_line(k_line, 4)
     last_ma_value = ma_line[0]
     slope_list = api.get_slope_line(ma_line)
-    print(slope_list)
     slope_sum = 0
     for slope in slope_list:
         slope_sum = slope_sum + slope
@@ -49,9 +48,9 @@ def get_sell_condition(symbol_value):
     price_low = price_max * (1 - down_percent)
     price_min = price_buy * (1 - down_percent_max)
     print('price_buy = %s' % price_buy)
-    print('price_max = %s' % price_max)
-    print('price_low = %s' % price_low)
-    print('price_min = %s' % price_min)
+    #print('price_max = %s' % price_max)
+    #print('price_low = %s' % price_low)
+    #print('price_min = %s' % price_min)
     print('close = %s' % k_line_0_close)
     print('percent = %.4f%%' % ((k_line_0_close / price_buy - 1) * 100))
     condition1 = k_line_0_close < k_line[0]['open']#阴线
@@ -72,8 +71,8 @@ def main(symbol_value):
     operationType = misc.getConfigKeyValueByKeyName('config.ini', symbol_value, 'type')
     buy_signal = int(misc.getConfigKeyValueByKeyName('config.ini', symbol_value, 'buy_signal'))
     sell_signal = int(misc.getConfigKeyValueByKeyName('config.ini', symbol_value, 'sell_signal'))
-    buy_signal_max = int(misc.getConfigKeyValueByKeyName('config.ini', symbol_value, 'buy_signal_max'))
-    sell_signal_max = int(misc.getConfigKeyValueByKeyName('config.ini', symbol_value, 'sell_signal_max'))
+    buy_signal_max = int(misc.getConfigKeyValueByKeyName('config.ini', 'config', 'buy_signal_max'))
+    sell_signal_max = int(misc.getConfigKeyValueByKeyName('config.ini', 'config', 'sell_signal_max'))
     condition = operationType == 'sell'
     order_id = None
     if condition:#买入判断
@@ -81,6 +80,7 @@ def main(symbol_value):
         if condition1 and condition2 and condition3:
             print('买入信号+1')
             buy_signal = buy_signal + 1
+            print('buy_signal = %s' % buy_signal)
             misc.setConfigKeyValue('config.ini', symbol_value, 'buy_signal', buy_signal)
         else:
             misc.setConfigKeyValue('config.ini', symbol_value, 'buy_signal', 0)
@@ -89,6 +89,7 @@ def main(symbol_value):
         if condition:
             print('卖出信号+1')
             sell_signal = sell_signal + 1
+            print('sell_signal = %s' % sell_signal)
             misc.setConfigKeyValue('config.ini', symbol_value, 'sell_signal', sell_signal)
         else:
             misc.setConfigKeyValue('config.ini', symbol_value, 'sell_signal', 0)
@@ -144,6 +145,7 @@ symbol_value_list = ['bccbtc','ethbtc','dashbtc', 'ltcbtc', 'etcbtc']#
 account_id = api.get_account_id()
 down_percent = float(misc.getConfigKeyValueByKeyName('config.ini', 'config', 'down_percent'))
 down_percent_max = float(misc.getConfigKeyValueByKeyName('config.ini', 'config', 'down_percent_max'))
+second = int(misc.getConfigKeyValueByKeyName('config.ini', 'config', 'second'))
 for symbol_value in symbol_value_list:
     misc.setConfigKeyValue('config.ini', symbol_value, 'buy_signal', '0')
     misc.setConfigKeyValue('config.ini', symbol_value, 'sell_signal', '0')
@@ -154,11 +156,11 @@ while True:
             print()
         except Exception as e:
             print(e)
-            misc.sendEmail(mail_host, mail_user, mail_pass, receivers, 'error_report_%s' % misc.getTimeStr(), e)
+            #misc.sendEmail(mail_host, mail_user, mail_pass, receivers, 'error_report_%s' % misc.getTimeStr(), e)
         except ApiError as e:
             print(e)
-            misc.sendEmail(mail_host, mail_user, mail_pass, receivers, 'error_report_%s' % misc.getTimeStr(), e)
+            #misc.sendEmail(mail_host, mail_user, mail_pass, receivers, 'error_report_%s' % misc.getTimeStr(), e)
         except ApiNetworkError as e:
             print(e)
-            misc.sendEmail(mail_host, mail_user, mail_pass, receivers, 'error_report_%s' % misc.getTimeStr(), e)
-    time.sleep(60)
+            #misc.sendEmail(mail_host, mail_user, mail_pass, receivers, 'error_report_%s' % misc.getTimeStr(), e)
+    time.sleep(second)
