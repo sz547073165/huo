@@ -21,8 +21,10 @@ def get_buy_condition(symbol_value):
     k_line = api.get_k_line(symbol_value, period_value, 8)
     last_close_value = k_line[0]['close']
     ma_line = api.get_ma_line(k_line, 4)
+    print(ma_line)
     last_ma_value = ma_line[0]
     slope_list = api.get_slope_line(ma_line)
+    print(slope_list)
     slope_sum = 0
     for slope in slope_list:
         slope_sum = slope_sum + slope
@@ -105,6 +107,8 @@ def main(symbol_value):
         #卖出操作
         coin_name = misc.getConfigKeyValueByKeyName('config.ini', symbol_value, 'coin_name')
         amount = api.get_balance(account_id, coin_name)
+        if coin_name == 'knc' or coin_name == 'qsp':
+            amount = misc.get_float_str(amount,0)
         order_id = api.do_place(account_id, amount, symbol_value, 'sell-market')
         misc.setConfigKeyValue('config.ini', symbol_value, 'sell_signal', 0)
         
@@ -141,15 +145,18 @@ def main(symbol_value):
         '''
 
 #交易对
-symbol_value_list = ['bccbtc','ethbtc','dashbtc', 'ltcbtc', 'etcbtc']#
 account_id = api.get_account_id()
-down_percent = float(misc.getConfigKeyValueByKeyName('config.ini', 'config', 'down_percent'))
-down_percent_max = float(misc.getConfigKeyValueByKeyName('config.ini', 'config', 'down_percent_max'))
-second = int(misc.getConfigKeyValueByKeyName('config.ini', 'config', 'second'))
-for symbol_value in symbol_value_list:
-    misc.setConfigKeyValue('config.ini', symbol_value, 'buy_signal', '0')
-    misc.setConfigKeyValue('config.ini', symbol_value, 'sell_signal', '0')
+num = 0
 while True:
+    symbol_value_list = misc.getConfigKeyValueByKeyName('config.ini', 'config', 'symbol_value_list').split(',')
+    if num == 0:
+        num = num + 1
+        for symbol_value in symbol_value_list:
+            misc.setConfigKeyValue('config.ini', symbol_value, 'buy_signal', '0')
+            misc.setConfigKeyValue('config.ini', symbol_value, 'sell_signal', '0')
+    down_percent = float(misc.getConfigKeyValueByKeyName('config.ini', 'config', 'down_percent'))
+    down_percent_max = float(misc.getConfigKeyValueByKeyName('config.ini', 'config', 'down_percent_max'))
+    second = int(misc.getConfigKeyValueByKeyName('config.ini', 'config', 'second'))
     for symbol_value in symbol_value_list:
         try:
             main(symbol_value)

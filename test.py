@@ -15,7 +15,7 @@ mail_host = misc.getConfigKeyValueByKeyName('config.ini', 'mail', 'mailHost')
 mail_user = misc.getConfigKeyValueByKeyName('config.ini', 'mail', 'mailUser')
 receivers = misc.getConfigKeyValueByKeyName('config.ini', 'mail', 'receivers').split(',')
 #交易对
-symbol_value = 'btcusdt'
+symbol_value = 'qspbtc'
 money_name = 'usdt'
 coin_name = 'btc'
 account_id = api.get_account_id()
@@ -34,9 +34,5 @@ print('btc  = %s' % btc)
 print('bcc  = %s' % bcc)
 
 
-order_detail = api.get_order_detail(210157698)[0]
-print(order_detail)
-
-value = 0.1562
-print(1.01654 * value)
-print(0.99487929 * value)
+k_line = api.get_k_line(symbol_value)
+print(k_line)
