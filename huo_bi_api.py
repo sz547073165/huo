@@ -38,7 +38,7 @@ def get_ma_line(k_line, period_value=5):
         close_price_sum = 0
         for j in range(i, i + period_value):
             close_price_sum += float(k_line[j]['close'])
-        ma_line.append(round(close_price_sum / period_value, 6))
+        ma_line.append(round(close_price_sum / period_value, 10))
     return ma_line
 
 def get_slope_line(ma_line):
@@ -46,7 +46,7 @@ def get_slope_line(ma_line):
         return
     slope_line = []
     for i in range(len(ma_line) - 1):
-        slope_line.append(round(ma_line[i] - ma_line[i+1], 6))
+        slope_line.append(round(ma_line[i] - ma_line[i+1], 10))
     return slope_line
 
 #创建并执行一个新订单，返回订单ID
