@@ -19,18 +19,22 @@ receivers = misc.getConfigKeyValueByKeyName('config.ini', 'mail', 'receivers').s
 symbol_value = 'btcusdt'
 money_name = 'usdt'
 coin_name = 'btc'
-period_value = '1day' #60min
+period_value = '1day' #60min/1day
+n = 20 #回看时间窗口
+j = 100 #缩小倍数
 
 k_line = api.get_k_line(symbol_value,period_value,200)
 
 roc_list = []
 time_list = []
-n = 14
+close_list = []
+ma_list = []
+
 for index in np.arange(0,len(k_line) - n):
     roc = (k_line[index].close - k_line[index + n].close) / k_line[index + n].close * 100
     roc_list.append(roc)
 
-print(roc_list[::-1])
+#print(roc_list[::-1])
 
 for index in np.arange(0,len(k_line) - n):
     timestamp = k_line[index].id
@@ -38,39 +42,31 @@ for index in np.arange(0,len(k_line) - n):
     #time_list.append(time.strftime("%Y-%m-%d %H:%M:%S", temp))
     time_list.append(temp)
 
-print(time_list[::-1])
+#print(time_list[::-1])
 
-'''
-import matplotlib.pyplot as plt
-from matplotlib.dates import DayLocator, HourLocator, DateFormatter, drange
+for index in np.arange(0,len(k_line) - n):
+    close_list.append(k_line[index].close / j)
 
-fig = plt.figure()  
-axes = fig.add_subplot(1,1,1)
-    
-startDate = time_list[-1]
-endDate = time_list[0]
-# 设置日期的间隔
-delta = datetime.timedelta(hours=1)
-# 生成一个matplotlib可以识别的日期对象
-dates = drange(startDate , endDate, delta)
-# 使用plot_date绘制日期图像
-axes.plot_date(dates,  roc_list[::-1],  'm-',  marker='.',  linewidth=1)
-# 设置日期的显示格式
-axes.xaxis.set_major_formatter(DateFormatter('%Y-%m-%d %H:%M:%S'))
-# 日期的排列根据图像的大小自适应
-fig.autofmt_xdate()
+#print(close_list)
 
-plt.show()
-'''
+for index in np.arange(0,len(k_line) - n):
+    ma_list.append(misc.getMALine(k_line,n)[index] / j)
 
+#绘制
 import plotly
 import plotly.graph_objs as go
+#roc线
+roc = go.Scatter(x=time_list[::-1],y=roc_list[::-1],name="roc({})".format(n))
+#收盘价
+close = go.Scatter(x=time_list[::-1],y=close_list[::-1],name="收盘价")
+#均线
+ma = go.Scatter(x=time_list[::-1],y=ma_list[::-1],name="均线({})".format(n))
 
-data = [go.Scatter(x=time_list[::-1],y=roc_list[::-1])]
+data = [close, roc, ma]
 layout = go.Layout(xaxis = dict(
                    range = [time_list[-1].timestamp() * 1000,
                             time_list[0].timestamp() * 1000]),
-                    title="btc-usdt roc")
+                    title=symbol_value)
 fig = go.Figure(data = data, layout = layout)
 plotly.offline.plot(fig)
 
